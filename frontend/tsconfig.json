@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "lib": ["dom","esnext"],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "target": "ES6",
+    "module": "ESNext",
+    "strict": true,
+    "jsx": "react-jsx"  // This enables JSX syntax support
+  },
+  "include": ["src"]
+}

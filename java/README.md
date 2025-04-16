@@ -1,4 +1,4 @@
-# Capstone Starter Project
+# Tower Defense game // name incoming
 
 ## Database
 
