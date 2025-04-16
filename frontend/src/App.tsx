@@ -1,25 +1,26 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from 'react';
+import Board from './components/board'; // Adjust path if needed
 
-function App() {
+const App = () => {
+  const [gameStarted, setGameStarted] = useState(false);
+
+  // Define startGame function
+  const startGame = () => {
+    setGameStarted(true);
+    console.log('Game Started!');
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+      <div className="app">
+        {/* Start Button placed outside the board */}
+        <div className="start-container">
+          <button onClick={startGame}>Start Game</button>
+        </div>
+
+        {/* The Game Board */}
+        {gameStarted ? <Board /> : <p>Click start to begin the game!</p>}
+      </div>
   );
-}
+};
 
 export default App;
