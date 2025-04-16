@@ -35,8 +35,8 @@ const Board: React.FC = () => {
     const [roundActive, setRoundActive] = useState(false);
     const [gameOver, setGameOver] = useState(false);
 
-    const towerRange = 100;
-    const towerFireRate = 10000;
+    const towerRange = 2;
+    const towerFireRate = 200;
 
     const rounds = [
         { enemyCount: 5, spawnRate: 500 },
@@ -77,32 +77,21 @@ const Board: React.FC = () => {
         return () => clearInterval(moveInterval);
     }, []);
 
-    const findTarget = useCallback((tower: Tower): Enemy | null => {
-        let nearestEnemy: Enemy | null = null;  // Explicitly type nearestEnemy as Enemy | null
+    const findTarget = (tower: Tower, enemyList: Enemy[]): Enemy | null => {
+        let nearestEnemy: Enemy | null = null;
         let shortestDistance = towerRange;
-        console.log(`Checking targets for tower at (${tower.row}, ${tower.col})`);
 
-        // Loop through enemies and find the closest one within range
-        for (const enemy of enemies) {
-            // Calculate the Manhattan distance between the tower and the enemy
+        for (const enemy of enemyList) {
             const distance = Math.abs(tower.row - enemy.position.row) + Math.abs(tower.col - enemy.position.col);
-
-            // If the enemy is within range and closer than the current closest, select it
             if (distance <= towerRange && distance < shortestDistance) {
                 nearestEnemy = enemy;
                 shortestDistance = distance;
             }
         }
 
-        // Check if we found a target and log it
-        if (nearestEnemy !== null) {
-            console.log(`Tower at (${tower.row}, ${tower.col}) found target at (${nearestEnemy.position.row}, ${nearestEnemy.position.col})`);
-        } else {
-            console.log(`Tower at (${tower.row}, ${tower.col}) found no target`);
-        }
-
         return nearestEnemy;
-    }, [enemies]);
+    };
+
     // Fire projectile at the target
     const fireProjectile = useCallback((tower: Tower, target: Enemy) => {
         const projectile = {
@@ -132,8 +121,17 @@ const Board: React.FC = () => {
 
                         if (nextRow === proj.targetPos.row && nextCol === proj.targetPos.col) {
                             console.log(`Projectile hit target at (${proj.targetPos.row}, ${proj.targetPos.col})`);
-                            clearInterval(projectileMoveInterval); // Stop moving if target is reached
+
+                            // Apply damage
+                            setEnemies((prevEnemies) =>
+                                prevEnemies.map((e) =>
+                                    e.id === proj.targetId ? { ...e, health: e.health - proj.damage } : e
+                                )
+                            );
+
+                            clearInterval(projectileMoveInterval);
                         }
+
 
                         console.log(`Projectile moving: (${proj.currentPos.row}, ${proj.currentPos.col}) -> (${nextRow}, ${nextCol})`);
 
@@ -147,23 +145,26 @@ const Board: React.FC = () => {
             );
         }, 60); // Move projectile every 500ms
     };
-
+    setEnemies((prevEnemies) =>
+        prevEnemies
+            .map((e) =>
+                e.id === proj.targetId ? { ...e, health: e.health - proj.damage } : e
+            )
+            .filter((e) => e.health > 0)
+    );
     // Handle towers shooting at enemies
     useEffect(() => {
-        const towerShootingIntervals = towers.map((tower) => {
-            return setInterval(() => {
-                const target = findTarget(tower);
+        const shootingLoop = setInterval(() => {
+            towers.forEach((tower) => {
+                const target = findTarget(tower, enemies); // pass enemies directly
                 if (target) {
-                    fireProjectile(tower, target); // Fire when target is found
+                    fireProjectile(tower, target);
                 }
-            }, towerFireRate);
-        });
+            });
+        }, towerFireRate);
 
-        return () => {
-            towerShootingIntervals.forEach((interval) => clearInterval(interval));
-        };
-    }, [towers, findTarget, fireProjectile]);
-
+        return () => clearInterval(shootingLoop);
+    }, [towers, enemies, fireProjectile]);
 
 
     // Check if a tile is a path, start, or end tile
