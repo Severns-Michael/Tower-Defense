@@ -145,14 +145,7 @@ const Board: React.FC = () => {
             );
         }, 60); // Move projectile every 500ms
     };
-    setEnemies((prevEnemies) =>
-        prevEnemies
-            .map((e) =>
-                e.id === proj.targetId ? { ...e, health: e.health - proj.damage } : e
-            )
-            .filter((e) => e.health > 0)
-    );
-    // Handle towers shooting at enemies
+
     useEffect(() => {
         const shootingLoop = setInterval(() => {
             towers.forEach((tower) => {
