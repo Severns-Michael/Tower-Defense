@@ -100,7 +100,7 @@ const Board: React.FC = () => {
             targetId: target.id,
             currentPos: { row: tower.row, col: tower.col },
             targetPos: target.position,
-            damage: 10,
+            damage: 50,
         };
         console.log(`Tower at (${tower.row}, ${tower.col}) firing at enemy at (${target.position.row}, ${target.position.col})`);
 
@@ -124,9 +124,11 @@ const Board: React.FC = () => {
 
                             // Apply damage
                             setEnemies((prevEnemies) =>
-                                prevEnemies.map((e) =>
-                                    e.id === proj.targetId ? { ...e, health: e.health - proj.damage } : e
-                                )
+                                prevEnemies
+                                    .map((e) =>
+                                        e.id === proj.targetId ? { ...e, health: e.health - proj.damage } : e
+                                    )
+                                    .filter((e) => e.health > 0)
                             );
 
                             clearInterval(projectileMoveInterval);
@@ -148,8 +150,10 @@ const Board: React.FC = () => {
 
     useEffect(() => {
         const shootingLoop = setInterval(() => {
+            const aliveEnemies = enemies.filter((e) => e.health > 0);
+
             towers.forEach((tower) => {
-                const target = findTarget(tower, enemies); // pass enemies directly
+                const target = findTarget(tower, aliveEnemies);
                 if (target) {
                     fireProjectile(tower, target);
                 }
