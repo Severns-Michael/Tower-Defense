@@ -1,26 +1,13 @@
-import React, { useState } from 'react';
-import Board from './components/board'; // Adjust path if needed
+import React from "react";
+import GameCanvas from "./components/GameCanvas";
 
-const App = () => {
-  const [gameStarted, setGameStarted] = useState(false);
-
-  // Define startGame function
-  const startGame = () => {
-    setGameStarted(true);
-    console.log('Game Started!');
-  };
-
-  return (
-      <div className="app">
-        {/* Start Button placed outside the board */}
-        <div className="start-container">
-          <button onClick={startGame}>Start Game</button>
+function App() {
+    return (
+        <div>
+            <h1>React + Phaser Tower Defense</h1>
+            <GameCanvas />
         </div>
-
-        {/* The Game Board */}
-        {gameStarted ? <Board /> : <p>Click start to begin the game!</p>}
-      </div>
-  );
-};
+    );
+}
 
 export default App;

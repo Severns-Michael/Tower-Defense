@@ -1,0 +1,1 @@
+//# Initialization for Phaser game in React
