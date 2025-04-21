@@ -1,10 +1,8 @@
 import Phaser from 'phaser';
 import EventBus from '../Utils/EventBus';
-import {Tower} from "../Objects/Tower";
-import {Enemy} from "../Objects/Enemy";
-import {TowerType} from '../Utils/TowerData';
-
-
+import { Tower } from "../Objects/Tower";
+import { Enemy } from "../Objects/Enemy";
+import { TowerType } from '../Utils/TowerData';
 
 export default class MainScene extends Phaser.Scene {
     towers: Tower[] = [];
@@ -18,13 +16,14 @@ export default class MainScene extends Phaser.Scene {
     gameOver: boolean = false;
     selectedTowerType: TowerType | null = null;
     private tileSize: number = 64;
+    private tileScale: number = 2;
 
     constructor() {
         super('GameScene');
     }
 
     preload() {
-        this.load.tilemapTiledJSON('map', 'assets/map_basic4.json');
+        this.load.tilemapTiledJSON('map', 'assets/map_basic5.json');
         this.load.image('walls_floor', 'assets/walls_floor.png');
         this.load.image('water', 'assets/Water_coasts_animation.png');
     }
@@ -32,61 +31,50 @@ export default class MainScene extends Phaser.Scene {
     create() {
         const map = this.make.tilemap({ key: 'map' });
 
-        // Add both tilesets to the map
         const wallsFloorTileset = map.addTilesetImage('walls_floor', 'walls_floor');
         const waterTileset = map.addTilesetImage('water', 'water');
 
-        // Check if the tilesets are valid before using them
+        // Ensure tileset is not null before proceeding
         if (!wallsFloorTileset || !waterTileset) {
-            console.error("One or more tilesets are not found!");
+            console.error("Tilesets could not be loaded.");
             return;
         }
 
+        // Create layers
         const pathLayer = map.createLayer('Path layer', [wallsFloorTileset, waterTileset], 0, 0);
         const terrainLayer = map.createLayer('Terrain layer', [wallsFloorTileset, waterTileset], 0, 0);
-        if (terrainLayer && pathLayer) {
-            terrainLayer.setScale(2); // Apply scaling to terrain layer
-            pathLayer.setScale(2); // Apply scaling to path layer
-        } else {
-            console.error("One or both layers are missing!");
-        }
 
-        if (!terrainLayer || !pathLayer) {
+        if (!pathLayer || !terrainLayer) {
             console.error("One or both layers are missing!");
             return;
         }
 
-        // Fill logicMap based on terrain tile types
+        // Initialize logicMap
+        this.logicMap = Array.from({ length: map.height }, () => Array(map.width).fill(0));
+
+        // Set properties based on the terrainLayer's tiles
         terrainLayer.forEachTile((tile: Phaser.Tilemaps.Tile) => {
             const y = tile.y;
             const x = tile.x;
 
-            if (!this.logicMap[y]) {
-                this.logicMap[y] = [];
-            }
-
-            const type = tile.properties?.type;
-            if (type === 'ground') {
-                this.logicMap[y][x] = 0; // Ground is free space
-            } else if (type === 'obstacle') {
-                this.logicMap[y][x] = 2; // Obstacle (cannot place tower here)
+            if (tile.properties && tile.properties.type) {
+                const type = tile.properties.type;
+                this.logicMap[y][x] = type === 'ground' ? 0 : type === 'obstacle' ? 2 : 9;
             } else {
-                this.logicMap[y][x] = 9; // Unknown/other
+                console.warn(`Tile at (${x}, ${y}) has no properties.`);
+                this.logicMap[y][x] = 9;
             }
-        });
-
-        // Fill in paths
-        pathLayer.forEachTile((tile: Phaser.Tilemaps.Tile) => {
-            const y = tile.y;
-            const x = tile.x;
-
-            if (!this.logicMap[y]) {
-                this.logicMap[y] = [];
-            }
-
-            const type = tile.properties?.type;
-            if (type === 'path') {
-                this.logicMap[y][x] = 1; // Path for enemies
+            if (tile.properties) {
+                const type = tile.properties.type;
+                if (type === 'ground') {
+                    this.logicMap[y][x] = 0; // Ground is free space
+                } else if (type === 'obstacle') {
+                    this.logicMap[y][x] = 2; // Obstacle (cannot place tower here)
+                } else {
+                    this.logicMap[y][x] = 9; // Unknown/other
+                }
+            } else {
+                console.warn(`Tile at (${x}, ${y}) has no properties.`);
             }
         });
 
@@ -103,17 +91,18 @@ export default class MainScene extends Phaser.Scene {
             new Phaser.Math.Vector2(675, 175),
         ];
 
-        // Highlight the path for debugging
-        this.path.forEach((p: Phaser.Math.Vector2) => {
-            this.add.circle(p.x, p.y, 5, 0xff0000).setDepth(10);
-        });
-
+        // Handle player input
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            const tileX = Math.floor(pointer.x / this.tileSize);
-            const tileY = Math.floor(pointer.y / this.tileSize);
+            const tileX = Math.floor(pointer.x / (this.tileSize * this.tileScale));
+            const tileY = Math.floor(pointer.y / (this.tileSize * this.tileScale));
 
-            console.log("Clicked tile:", tileX, tileY);
-            console.log("Selected tower:", this.selectedTowerType);
+            console.log("Clicked tile:", tileX, tileY); // Check if the coordinates are correct
+
+            // Check if tileX and tileY are within bounds of the logicMap
+            if (tileY < 0 || tileY >= this.logicMap.length || tileX < 0 || tileX >= this.logicMap[tileY].length) {
+                console.log("Clicked outside valid tile area.");
+                return;
+            }
 
             const logicValue = this.logicMap[tileY][tileX];
             if (!this.selectedTowerType) {
@@ -130,20 +119,18 @@ export default class MainScene extends Phaser.Scene {
             this.selectedTowerType = null; // reset after placing
         });
 
-
         // Example towers and enemies
-        this.towers.push(new Tower(this, 300, 350, TowerType.Fire ));
+        this.towers.push(new Tower(this, 300, 350, TowerType.Fire));
         this.enemies.push(new Enemy(this, 100, 100, this.path));
 
-
-// place tower event listener
+        // Place tower event listener
         this.events.on('tower-selected', (towerType: TowerType) => {
             this.selectedTowerType = towerType;
             console.log(`Tower selected:`, this.selectedTowerType);
         });
 
         // Start round logic
-
+        console.table(this.logicMap);
     }
 
     update(time: number, delta: number) {
@@ -153,7 +140,6 @@ export default class MainScene extends Phaser.Scene {
             return enemy.active; // or whatever flag you're using to check if it's still in the game
         });
     }
-
 
     shutdown() {
         EventBus.off('place-tower', this.placeTower, this);
@@ -181,30 +167,41 @@ export default class MainScene extends Phaser.Scene {
             });
         }
     }
+
     private getTileAt(x: number, y: number): { x: number, y: number } | null {
         // Convert world coords to tile coords and check if valid
-        // For now, let's fake it:
         return { x: Math.floor(x / 32), y: Math.floor(y / 32) }; // example for 32x32 grid
     }
 
     private canPlaceTowerHere(x: number, y: number): boolean {
-        const tileValue = this.logicMap[y][x];
-        if (tileValue === 0) {
-            return true; // Ground tile, can place tower
+        // Ensure that the coordinates are within bounds of the logicMap
+        if (y < 0 || y >= this.logicMap.length || x < 0 || x >= this.logicMap[y].length) {
+            console.log("Invalid tile coordinates:", x, y);
+            return false;
         }
-        return false; // Not ground (either path or obstacle)
+
+        const tileValue = this.logicMap[y][x];
+        console.log("Checking if tower can be placed on tile:", tileValue);
+        return tileValue === 0; // Only allow placement on ground (value 0)
     }
 
     placeTower(x: number, y: number, towerType: TowerType) {
         console.log(`Placing ${towerType} tower at (${x}, ${y})`);
+        const tileValue = this.logicMap[y][x];
+        console.log("Tile value at", x, y, "is", tileValue);
 
         if (!this.canPlaceTowerHere(x, y)) {
             console.log("Can't place tower here!");
             return;
         }
 
-        // Pass the TowerType to the constructor properly
-        const newTower = new Tower(this, x * this.tileSize + this.tileSize / 2, y * this.tileSize + this.tileSize / 2, towerType);
+        const newTower = new Tower(
+            this,
+            x * this.tileSize * this.tileScale,
+            y * this.tileSize * this.tileScale,
+            towerType
+        );
+
         this.towers.push(newTower);
     }
 
@@ -212,6 +209,4 @@ export default class MainScene extends Phaser.Scene {
         this.selectedTowerType = towerType;
         console.log("Tower selected in scene:", this.selectedTowerType);
     }
-
-
 }
