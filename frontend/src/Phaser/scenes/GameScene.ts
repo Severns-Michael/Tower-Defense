@@ -3,6 +3,7 @@ import EventBus from '../Utils/EventBus';
 import { Tower } from "../Objects/Tower";
 import { Enemy } from "../Objects/Enemy";
 import { TowerType } from '../Utils/TowerData';
+import { RoundManager } from "../../managers/RoundManager";
 
 const tileSize = 64;
 
@@ -151,7 +152,7 @@ export default class MainScene extends Phaser.Scene {
         });
 
         // Start round logic
-        this.startRound();
+
     }
 
     update(time: number, delta: number) {
