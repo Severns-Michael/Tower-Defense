@@ -27,25 +27,29 @@ export class Tower extends Phaser.GameObjects.Sprite {
     }
 //check for taget is in range and ready to shoot
     update(time: number, delta: number, enemies: Enemy[]) {
-        const target = this.getTarget(enemies);
-
-        if (target && this.canShoot(time)) {
-            this.shoot(target);
+        const targetEnemy = this.getTarget(enemies);
+        if (targetEnemy) {
+            this.shoot(targetEnemy, time);
         }
     }
 //shoot
-    shoot(target: Enemy) {
-        this.lastShotTime = this.scene.time.now;
+    shoot(target: Enemy, time: number) {
+        if (!this.canShoot(time)) {
+            return;
+        }
 
-        const projectile = this.scene.add.sprite(this.x, this.y, 'fireball');
-        this.scene.physics.moveToObject(projectile, target, 200);
+        if (!target || !target.body) {
+            console.error("Invalid target or missing body component!");
+            return;
+        }
 
-        this.scene.time.delayedCall(500, () => { // simulate hit after travel time
-            if (Phaser.Math.Distance.Between(projectile.x, projectile.y, target.x, target.y) < 20) {
-                target.takeDamage(this.stats.damage);
-                projectile.destroy();
-            }
-        });
+        // Proceed with the shooting logic
+        const bullet = this.scene.add.sprite(this.x, this.y, 'bullet');
+        this.scene.physics.world.enable(bullet); // Enable physics for the bullet
+        this.scene.physics.moveToObject(bullet, target, 200); // Move the bullet towards the target
+
+        // Update last shot time
+        this.lastShotTime = time;
     }
 
     getTarget(enemies: Enemy[]): Enemy | null {
@@ -55,6 +59,13 @@ export class Tower extends Phaser.GameObjects.Sprite {
                 Phaser.Math.Distance.Between(this.x, this.y, a.x, a.y) -
                 Phaser.Math.Distance.Between(this.x, this.y, b.x, b.y)
             )[0];
+
+        if (closest) {
+            console.log("Target found:", closest);
+        } else {
+            console.log("No target within range");
+        }
+
         return closest || null;
     }
 }

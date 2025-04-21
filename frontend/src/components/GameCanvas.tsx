@@ -8,10 +8,14 @@ const GameCanvas: React.FC = () => {
     useEffect(() => {
         const config: Phaser.Types.Core.GameConfig = {
             type: Phaser.AUTO,
-            width: 800,
-            height: 600,
+            width: window.innerWidth,
+            height: window.innerHeight,
             parent: gameRef.current || undefined,
             scene: [GameScene],
+            scale: {
+                mode: Phaser.Scale.FIT,  // This will make sure the game fits the screen
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            },
             physics: {
                 default: 'arcade',
                 arcade: { debug: false },
