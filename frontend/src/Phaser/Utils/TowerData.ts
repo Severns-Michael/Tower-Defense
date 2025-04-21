@@ -1,6 +1,11 @@
 
 // Define upgrade paths and stats for each tower type
-type TowerType = 'fire';
+export enum TowerType {
+    Fire = 'fire',
+    // Ice = 'ice',
+    // Physical = 'physical',
+    // Lightning = 'lightning',
+}
 
 // Define the properties for each upgrade stage (LightBlue, DarkBlue, MidnightBlue, etc.)
 interface UpgradeStats {
@@ -22,11 +27,15 @@ interface TowerUpgrades {
     LowerPath: UpgradePath;
 }
 
-type TowerData = Record<TowerType, TowerUpgrades>;
+export type {
+    UpgradeStats,
+    UpgradePath,
+    TowerUpgrades,
+};
+export type TowerDataType = Record<TowerType, TowerUpgrades>;
 
-// Sample data for fire tower
-const TowerData: TowerData = {
-    fire: {
+export const TowerData: TowerDataType = {
+    [TowerType.Fire]: {
         TopPath: {
             0: { damage: 10, range: 100, rateOfFire: 1000, specialAbility: 'Fireball' },
             1: { damage: 20, range: 120, rateOfFire: 900, specialAbility: 'Flame Burst' },
@@ -41,16 +50,7 @@ const TowerData: TowerData = {
             0: { damage: 8, range: 90, rateOfFire: 1000, specialAbility: 'Poison Cloud' },
             1: { damage: 12, range: 100, rateOfFire: 950, specialAbility: 'Acid Rain' },
             2: { damage: 18, range: 110, rateOfFire: 900, specialAbility: 'Toxic Wave' },
-        }
+        },
     },
-
-    // Ice, Physical, Lightning tower data can follow the same structure...
-
 };
-export {
-    TowerType,
-    UpgradeStats,
-    UpgradePath,
-    TowerUpgrades,
-    TowerData
-};
+

@@ -1,11 +1,10 @@
 import Phaser from 'phaser';
 import EventBus from '../Utils/EventBus';
-import { Tower } from "../Objects/Tower";
-import { Enemy } from "../Objects/Enemy";
-import { TowerType } from '../Utils/TowerData';
-import { RoundManager } from "../../managers/RoundManager";
+import {Tower} from "../Objects/Tower";
+import {Enemy} from "../Objects/Enemy";
+import {TowerType} from '../Utils/TowerData';
 
-const tileSize = 64;
+
 
 export default class MainScene extends Phaser.Scene {
     towers: Tower[] = [];
@@ -17,7 +16,8 @@ export default class MainScene extends Phaser.Scene {
     maxRounds: number = 5;
     enemiesRemaining: number = 0;
     gameOver: boolean = false;
-    selectedTower: TowerType | null = null;
+    selectedTowerType: TowerType | null = null;
+    private tileSize: number = 64;
 
     constructor() {
         super('GameScene');
@@ -108,47 +108,38 @@ export default class MainScene extends Phaser.Scene {
             this.add.circle(p.x, p.y, 5, 0xff0000).setDepth(10);
         });
 
-        // Handle pointer tower placement
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            const x = Math.floor(pointer.x / tileSize);
-            const y = Math.floor(pointer.y / tileSize);
+            const tileX = Math.floor(pointer.x / this.tileSize);
+            const tileY = Math.floor(pointer.y / this.tileSize);
 
-            if (this.logicMap[y] && this.logicMap[y][x] === 0) {
-                // Only place a tower on ground (not path or obstacle)
-                this.placeTower({ x: x * tileSize, y: y * tileSize, type: 'fire' });
-                this.logicMap[y][x] = 3; // Mark the tile as occupied
-            } else {
-                console.log("Can't place tower here!");
+            console.log("Clicked tile:", tileX, tileY);
+            console.log("Selected tower:", this.selectedTowerType);
+
+            const logicValue = this.logicMap[tileY][tileX];
+            if (!this.selectedTowerType) {
+                console.log("No tower selected!");
+                return;
             }
+
+            if (logicValue === 9) {
+                console.log("Can't place tower here!");
+                return;
+            }
+
+            this.placeTower(tileX, tileY, this.selectedTowerType);
+            this.selectedTowerType = null; // reset after placing
         });
+
 
         // Example towers and enemies
-        this.towers.push(new Tower(this, 300, 350, 'fire'));
+        this.towers.push(new Tower(this, 300, 350, TowerType.Fire ));
         this.enemies.push(new Enemy(this, 100, 100, this.path));
 
-        // Add hover tile highlight for tower placement
-        this.highlightTile = this.add.rectangle(0, 0, tileSize, tileSize, 0x00ff00, 0.3).setOrigin(0).setVisible(false);
 
-        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            const x = Math.floor(pointer.x / tileSize);
-            const y = Math.floor(pointer.y / tileSize);
-
-            console.log(`Clicked tile: (${x}, ${y})`);
-            console.log(`Selected tower: ${this.selectedTower}`);
-            console.log(`LogicMap value: ${this.logicMap[y]?.[x]}`);
-
-            if (this.selectedTower && this.logicMap[y] && this.logicMap[y][x] === 0) {
-                this.placeTower({ x: x * tileSize, y: y * tileSize, type: this.selectedTower });
-                this.logicMap[y][x] = 3;
-            } else {
-                console.log("Can't place tower here!");
-            }
-        });
 // place tower event listener
-        window.addEventListener('tower-selected', (event: any) => {
-            const towerType: TowerType = event.detail;
-            this.selectedTower = towerType;
-            console.log("Selected tower type:", this.selectedTower); // should be "fire", "ice", etc.
+        this.events.on('tower-selected', (towerType: TowerType) => {
+            this.selectedTowerType = towerType;
+            console.log(`Tower selected:`, this.selectedTowerType);
         });
 
         // Start round logic
@@ -157,22 +148,12 @@ export default class MainScene extends Phaser.Scene {
 
     update(time: number, delta: number) {
         // Update enemies and towers each frame
-        this.enemies.forEach(enemy => enemy.update(time, delta));
-        this.towers.forEach(tower => tower.update(time, delta, this.enemies));
-        this.selectedTower = 'fire';
+        this.enemies = this.enemies.filter(enemy => {
+            enemy.update(time, delta);
+            return enemy.active; // or whatever flag you're using to check if it's still in the game
+        });
     }
 
-    placeTower(towerData: { x: number, y: number, type: string }) {
-        if (!this.selectedTower) {
-            console.log("No tower type selected");
-            return;
-        }
-
-        console.log(`Placing ${this.selectedTower} tower at (${towerData.x}, ${towerData.y})`);
-
-        const newTower = new Tower(this, towerData.x, towerData.y, this.selectedTower);
-        this.towers.push(newTower);
-    }
 
     shutdown() {
         EventBus.off('place-tower', this.placeTower, this);
@@ -200,5 +181,37 @@ export default class MainScene extends Phaser.Scene {
             });
         }
     }
+    private getTileAt(x: number, y: number): { x: number, y: number } | null {
+        // Convert world coords to tile coords and check if valid
+        // For now, let's fake it:
+        return { x: Math.floor(x / 32), y: Math.floor(y / 32) }; // example for 32x32 grid
+    }
+
+    private canPlaceTowerHere(x: number, y: number): boolean {
+        const tileValue = this.logicMap[y][x];
+        if (tileValue === 0) {
+            return true; // Ground tile, can place tower
+        }
+        return false; // Not ground (either path or obstacle)
+    }
+
+    placeTower(x: number, y: number, towerType: TowerType) {
+        console.log(`Placing ${towerType} tower at (${x}, ${y})`);
+
+        if (!this.canPlaceTowerHere(x, y)) {
+            console.log("Can't place tower here!");
+            return;
+        }
+
+        // Pass the TowerType to the constructor properly
+        const newTower = new Tower(this, x * this.tileSize + this.tileSize / 2, y * this.tileSize + this.tileSize / 2, towerType);
+        this.towers.push(newTower);
+    }
+
+    selectTower(towerType: TowerType) {
+        this.selectedTowerType = towerType;
+        console.log("Tower selected in scene:", this.selectedTowerType);
+    }
+
 
 }

@@ -19,11 +19,11 @@ const TowerSelector: React.FC<TowerSelectorProps> = ({ onTowerSelect }) => {
 
     const handleTowerClick = (tower: TowerType) => {
         setSelectedTower(tower);
-        onTowerSelect(tower);
+        onTowerSelect(tower);  // This should ensure the tower is selected properly
 
         // Dispatch event to Phaser
-        window.dispatchEvent(new CustomEvent('tower-selected', {
-            detail: 'fire' // not an object, just the string
+        window.dispatchEvent(new CustomEvent<TowerType>('tower-selected', {
+            detail: tower
         }));
     };
 
@@ -44,5 +44,3 @@ const TowerSelector: React.FC<TowerSelectorProps> = ({ onTowerSelect }) => {
         </div>
     );
 };
-
-export default TowerSelector;
