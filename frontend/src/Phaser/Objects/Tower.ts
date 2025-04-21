@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TowerData, UpgradeStats, TowerType } from '../Utils/TowerData';
 import { Enemy } from './Enemy';
+import { Projectile } from './Projectile';
 
 export class Tower extends Phaser.GameObjects.Sprite {
     type: TowerType;
@@ -10,6 +11,7 @@ export class Tower extends Phaser.GameObjects.Sprite {
     lastShotTime: number = 0;
     cooldown: number = 1000;
     rangeCircle: Phaser.GameObjects.Arc;
+    rateOfFire: number = 400;
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
         super(scene, x, y, `${type}-tower`);
@@ -33,23 +35,11 @@ export class Tower extends Phaser.GameObjects.Sprite {
         }
     }
 //shoot
-    shoot(target: Enemy, time: number) {
-        if (!this.canShoot(time)) {
-            return;
+    shoot(enemy: Enemy, time: number) {
+        if (!this.lastShotTime || time > this.lastShotTime + this.rateOfFire) {
+            this.lastShotTime = time;
+            new Projectile(this.scene, this.x, this.y, enemy);
         }
-
-        if (!target || !target.body) {
-            console.error("Invalid target or missing body component!");
-            return;
-        }
-
-        // Proceed with the shooting logic
-        const bullet = this.scene.add.sprite(this.x, this.y, 'bullet');
-        this.scene.physics.world.enable(bullet); // Enable physics for the bullet
-        this.scene.physics.moveToObject(bullet, target, 200); // Move the bullet towards the target
-
-        // Update last shot time
-        this.lastShotTime = time;
     }
 
     getTarget(enemies: Enemy[]): Enemy | null {
@@ -60,12 +50,7 @@ export class Tower extends Phaser.GameObjects.Sprite {
                 Phaser.Math.Distance.Between(this.x, this.y, b.x, b.y)
             )[0];
 
-        if (closest) {
-            console.log("Target found:", closest);
-        } else {
-            console.log("No target within range");
-        }
-
         return closest || null;
     }
+
 }

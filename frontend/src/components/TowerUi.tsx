@@ -1,23 +1,46 @@
-import React from 'react';
+// Define the Tower type
+import {useState} from "react";
 
-const TowerSelector = () => {
-    const towerTypes = ['fire', 'ice', 'physical', 'lightning'];
+export interface TowerType {
+    name: string;
+    type: string; // You can make this more specific, like 'fire' | 'ice' | etc., if you want.
+}
 
-    const placeTower = (type: string) => {
-        // Send event to Phaser
-        window.dispatchEvent(new CustomEvent('place-tower', {
-            detail: { x: 400, y: 300, type } // placeholder position
+interface TowerSelectorProps {
+    onTowerSelect: (tower: TowerType) => void;
+}
+
+const TowerSelector: React.FC<TowerSelectorProps> = ({ onTowerSelect }) => {
+    const [selectedTower, setSelectedTower] = useState<TowerType | null>(null);
+
+    const towerTypes: TowerType[] = [
+        { name: 'Fire', type: 'fire' },
+    ];
+
+    const handleTowerClick = (tower: TowerType) => {
+        setSelectedTower(tower);
+        onTowerSelect(tower);
+
+        // Dispatch event to Phaser
+        window.dispatchEvent(new CustomEvent('tower-selected', {
+            detail: 'fire' // not an object, just the string
         }));
     };
 
     return (
-        <div>
-            <h3>Select Tower</h3>
-            {towerTypes.map(type => (
-                <button key={type} onClick={() => placeTower(type)}>
-                    {type.toUpperCase()}
-                </button>
-            ))}
+        <div className="tower-selector">
+            <h3>Select a Tower</h3>
+            <div className="tower-buttons">
+                {towerTypes.map((tower) => (
+                    <button
+                        key={tower.type}
+                        onClick={() => handleTowerClick(tower)}
+                        className={selectedTower === tower ? 'selected' : ''}
+                    >
+                        {tower.name}
+                    </button>
+                ))}
+            </div>
         </div>
     );
 };

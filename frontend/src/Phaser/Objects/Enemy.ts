@@ -21,19 +21,18 @@ export class Enemy extends Phaser.GameObjects.Sprite {
         if (this.body && this.body instanceof Phaser.Physics.Arcade.Body) {
             const body = this.body as Phaser.Physics.Arcade.Body;
             body.setCollideWorldBounds(true);
-            body.setVelocity(100, 0); // Example velocity
             body.setBounce(1);
         } else {
             console.warn('Enemy body is not available or not an Arcade Body.');
         }
-
     }
-//enemy movment logic
+
+    // Movement logic
     update(time: number, delta: number) {
         if (this.currentWaypointIndex >= this.path.length) {
             // Reached the end of the path
             if (this.body && this.body instanceof Phaser.Physics.Arcade.Body) {
-                this.body.setVelocity(0, 0);
+                this.body.setVelocity(0, 0);  // Stop movement
             }
             return;
         }
@@ -53,11 +52,12 @@ export class Enemy extends Phaser.GameObjects.Sprite {
             const vy = Math.sin(angle) * this.speed;
 
             if (this.body && this.body instanceof Phaser.Physics.Arcade.Body) {
-                this.body.setVelocity(vx, vy);
+                this.body.setVelocity(vx, vy);  // Set velocity for physics body
             }
         }
     }
 
+    // Handle damage
     takeDamage(amount: number) {
         this.health -= amount;
         if (this.health <= 0) {
