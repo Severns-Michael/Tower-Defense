@@ -93,9 +93,10 @@ const GameCanvas: React.FC = () => {
                 </button>
                 {/* Tile Palette UI */}
                 <TilePalette
-                    onTileSelect={handleTileSelect}
-                    tileset="assets/walls_floor.png" // Your tileset image
-                    tileSize={50} // Set based on your tile size
+                    onTileSelect={handleTileSelect}  // Function to handle tile selection
+                    tileset="assets/walls_floor.png"  // Path to your tileset image
+                    tileSize={50}  // Tile size, adjust based on your tileset
+                    tileColumns={10}  // Number of columns in your tileset
                 />
             </div>
 
