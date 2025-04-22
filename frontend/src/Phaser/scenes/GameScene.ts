@@ -22,61 +22,10 @@ export default class MainScene extends Phaser.Scene {
         super('GameScene');
     }
 
-    preload() {
-        this.load.tilemapTiledJSON('map', 'assets/map_basic5.json');
-        this.load.image('walls_floor', 'assets/walls_floor.png');
-        this.load.image('water', 'assets/Water_coasts_animation.png');
-    }
+
 
     create() {
         const map = this.make.tilemap({ key: 'map' });
-
-        const wallsFloorTileset = map.addTilesetImage('walls_floor', 'walls_floor');
-        const waterTileset = map.addTilesetImage('water', 'water');
-
-        // Ensure tileset is not null before proceeding
-        if (!wallsFloorTileset || !waterTileset) {
-            console.error("Tilesets could not be loaded.");
-            return;
-        }
-
-        // Create layers
-        const pathLayer = map.createLayer('Path layer', [wallsFloorTileset, waterTileset], 0, 0);
-        const terrainLayer = map.createLayer('Terrain layer', [wallsFloorTileset, waterTileset], 0, 0);
-
-        if (!pathLayer || !terrainLayer) {
-            console.error("One or both layers are missing!");
-            return;
-        }
-
-        // Initialize logicMap
-        this.logicMap = Array.from({ length: map.height }, () => Array(map.width).fill(0));
-
-        // Set properties based on the terrainLayer's tiles
-        terrainLayer.forEachTile((tile: Phaser.Tilemaps.Tile) => {
-            const y = tile.y;
-            const x = tile.x;
-
-            if (tile.properties && tile.properties.type) {
-                const type = tile.properties.type;
-                this.logicMap[y][x] = type === 'ground' ? 0 : type === 'obstacle' ? 2 : 9;
-            } else {
-                console.warn(`Tile at (${x}, ${y}) has no properties.`);
-                this.logicMap[y][x] = 9;
-            }
-            if (tile.properties) {
-                const type = tile.properties.type;
-                if (type === 'ground') {
-                    this.logicMap[y][x] = 0; // Ground is free space
-                } else if (type === 'obstacle') {
-                    this.logicMap[y][x] = 2; // Obstacle (cannot place tower here)
-                } else {
-                    this.logicMap[y][x] = 9; // Unknown/other
-                }
-            } else {
-                console.warn(`Tile at (${x}, ${y}) has no properties.`);
-            }
-        });
 
         // Define the path for enemies
         this.path = [

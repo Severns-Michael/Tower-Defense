@@ -14,18 +14,22 @@ export class LevelEditorScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('dungeon', 'assets/walls_floor.png');  // Path to your tileset
+        this.load.image('grass_tileset', 'assets/grass_tileset.png');
+        this.load.image('stone_tileset', 'assets/tilesets/stone_ground_tileset.png');
+        this.load.image('wall_tileset', 'assets/tilesets/wall_tileset.png');
+        this.load.image('Struct_tileset', 'assets/tilesets/Struct_tileset.png');
     }
 
     create() {
         this.tilemap = this.make.tilemap({
-            tileWidth: this.gridSize,
-            tileHeight: this.gridSize,
+            tileWidth: 32,
+            tileHeight: 32,
             width: this.cols,
             height: this.rows,
         });
 
-        this.tileset = this.tilemap.addTilesetImage('dungeon', undefined, this.gridSize, this.gridSize)!;
+        // Corrected the tileset name to match the preload key
+        this.tileset = this.tilemap.addTilesetImage('grass_tileset', undefined, 32, 32)!;
         this.layer = this.tilemap.createBlankLayer('Ground', this.tileset)!;
 
         this.input.on('pointerdown', this.handlePointerDown, this);
@@ -38,6 +42,9 @@ export class LevelEditorScene extends Phaser.Scene {
         const worldPoint = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
         const tileX = this.layer.worldToTileX(worldPoint.x);
         const tileY = this.layer.worldToTileY(worldPoint.y);
+
+        // Log tile placement for debugging
+        console.log(`Placing tile at: (${tileX}, ${tileY}) with type: ${this.selectedTileType}`);
 
         // Place the selected tile
         this.layer.putTileAt(this.selectedTileType, tileX, tileY);

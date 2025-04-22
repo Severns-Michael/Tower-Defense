@@ -14,42 +14,57 @@ const TilePalette: React.FC<{ onTileSelect: (tileIndex: number) => void, tileset
         image.src = tileset;
 
         image.onload = () => {
+            console.log('Tileset image loaded');
+            console.log('Image dimensions:', image.width, image.height); // Log image dimensions
+
             const tilesetWidth = image.width;
             const tilesetHeight = image.height;
 
-            // Assuming tiles are arranged in a grid with the same width and height
             const columns = Math.floor(tilesetWidth / tileSize);
             const rows = Math.floor(tilesetHeight / tileSize);
-            setTileCount(rows * columns);
+
+            const totalTiles = rows * columns;
+            console.log(`Tileset has ${totalTiles} tiles`);
+
+            setTileCount(totalTiles);
+        };
+
+        image.onerror = (error) => {
+            console.error('Error loading tileset image', error);
         };
     }, [tileset, tileSize]);
 
     // Create the tile elements based on the tile count
-    const tileArray = Array.from({ length: tileCount }, (_, index) => (
-        <div
-            key={index}
-            style={{
-                width: tileSize,
-                height: tileSize,
-                backgroundImage: `url(${tileset})`,
-                backgroundPosition: `-${(index % tileColumns) * tileSize}px -${Math.floor(index / tileColumns) * tileSize}px`,
-                cursor: 'pointer',
-                display: 'inline-block',
-                border: '1px solid transparent', // Default border
-                transition: 'border 0.2s ease',
-            }}
-            onClick={() => onTileSelect(index)} // Pass the index of the tile
-            onMouseEnter={(e) => {
-                e.currentTarget.style.border = '2px solid #fff'; // Highlight the tile on hover
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.border = '1px solid transparent'; // Remove highlight
-            }}
-        />
-    ));
+    const tileArray = Array.from({ length: 64 }, (_, index) => { // Limit to 64 for testing
+        const x = (index % tileColumns) * -tileSize;
+        const y = Math.floor(index / tileColumns) * -tileSize;
+
+        return (
+            <div
+                key={index}
+                style={{
+                    width: tileSize,
+                    height: tileSize,
+                    backgroundImage: `url(${tileset})`,
+                    backgroundPosition: `${x}px ${y}px`,
+                    backgroundRepeat: 'no-repeat',
+                    cursor: 'pointer',
+                    display: 'block',
+                }}
+                onClick={() => onTileSelect(index)}
+            />
+        );
+    });
 
     return (
-        <div style={{ display: 'flex', overflowX: 'scroll', marginTop: '10px' }}>
+        <div
+            style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${tileColumns}, ${tileSize}px)`,
+                gridAutoRows: `${tileSize}px`,
+                overflow: 'auto',  // Allow overflow if necessary
+            }}
+        >
             {tileArray}
         </div>
     );

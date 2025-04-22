@@ -52,23 +52,35 @@ const GameCanvas: React.FC = () => {
     }, []);
 
     const handleTileSelect = (tileIndex: number) => {
-        setSelectedTileType(tileIndex); // Set the selected tile index
+        setSelectedTileType(tileIndex);
         console.log(`Selected tile type: ${tileIndex}`);
+
+        // Emitting the event to the Phaser scene
+        if (gameInstance) {
+            const levelEditorScene = gameInstance.scene.getScene('LevelEditorScene') as LevelEditorScene;
+            levelEditorScene.events.emit('tile-selected', tileIndex);
+        }
     };
 
 
 
     const toggleEditorMode = () => {
+        console.log('Toggling editor mode. Current mode:', editorMode);
         if (!gameInstance) return;
 
         if (editorMode) {
-            // Switch to GameScene
+            console.log('Stopping LevelEditorScene and starting GameScene');
             gameInstance.scene.stop('LevelEditorScene');
             gameInstance.scene.start('GameScene');
         } else {
-            // Switch to LevelEditorScene
+            console.log('Stopping GameScene and starting LevelEditorScene');
             gameInstance.scene.stop('GameScene');
             gameInstance.scene.start('LevelEditorScene');
+
+            setTimeout(() => {
+                console.log('Emitting tile-selected event');
+                gameInstance.scene.getScene('LevelEditorScene').events.emit('tile-selected', selectedTileType);
+            }, 100);
         }
 
         setEditorMode(!editorMode);
@@ -84,25 +96,40 @@ const GameCanvas: React.FC = () => {
     };
 
     return (
-        <div>
-            <div style={{ position: 'absolute', top: 20, left: 20, zIndex: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+            {/* Phaser game canvas */}
+            <div ref={gameRef} id="phaser-container" />
+
+            {/* Show TilePalette only in LevelEditor mode */}
+            {editorMode && (
+                <div style={{
+                    marginLeft: '10px',
+                    height: '750px',
+                    position: 'relative',
+                    zIndex: 10,
+                }}>
+                    <TilePalette
+                        onTileSelect={handleTileSelect}
+                        tileset="assets/grass_tileset.png"
+                        tileSize={32}
+                        tileColumns={4}
+                    />
+                </div>
+            )}
+
+            {/* UI Buttons */}
+            <div style={{
+                position: 'absolute',
+                top: 20,
+                left: 20,
+                zIndex: 20
+            }}>
                 <button onClick={() => handleTowerSelect(TowerType.Fire)}>Fire Tower</button>
-                {/* Add more tower buttons here as needed */}
                 <button onClick={toggleEditorMode} style={{ marginLeft: '10px' }}>
                     {editorMode ? 'Play Game' : 'Open Level Editor'}
                 </button>
-                {/* Tile Palette UI */}
-                <TilePalette
-                    onTileSelect={handleTileSelect}  // Function to handle tile selection
-                    tileset="assets/walls_floor.png"  // Path to your tileset image
-                    tileSize={50}  // Tile size, adjust based on your tileset
-                    tileColumns={10}  // Number of columns in your tileset
-                />
             </div>
-
-            <div ref={gameRef} id="phaser-container" />
         </div>
     );
-};
-
+}
 export default GameCanvas;
