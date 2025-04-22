@@ -3,13 +3,13 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "public/assets/walls_floor.tsx",
+    "activeFile": "public/assets/map_basic4.json",
     "expandedProjectPaths": [
         "public",
-        "public/assets/free-2d-top-down-pixel-dungeon-asset-pack",
         "public/assets/free-2d-top-down-pixel-dungeon-asset-pack/Tiled_files",
         ".",
-        "public/assets"
+        "public/assets",
+        "public/assets/free-2d-top-down-pixel-dungeon-asset-pack"
     ],
     "file.lastUsedOpenFilter": "All Files (*)",
     "fileStates": {
@@ -105,13 +105,17 @@
         },
         "public/assets/map_basic4.json": {
             "scale": 0.7144791666666667,
-            "selectedLayer": 2,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 240.03499052339993,
-                "y": 240.03499052339996
+                "x": 240.03499052339998,
+                "y": 239.33518005540162
             }
         },
+        "public/assets/map_basic4.json#walls_floor": {
+            "scaleInDock": 1
+        },
         "public/assets/map_basic4.json#water": {
+            "scaleInDock": 1,
             "scaleInEditor": 1
         },
         "public/assets/walls_floor.tmx": {
@@ -148,8 +152,8 @@
     ],
     "project": "tilesets.tiled-project",
     "recentFiles": [
-        "public/assets/map_basic4.json",
         "public/assets/walls_floor.tsx",
+        "public/assets/map_basic4.json",
         "public/assets/free-2d-top-down-pixel-dungeon-asset-pack/Tiled_files/Dungeon1.tmx",
         "public/assets/walls_floor.tmx",
         "public/assets/map_basic.tmx",
