@@ -1,71 +1,73 @@
 import React, { useState, useEffect } from 'react';
 
-const TilePalette: React.FC<{ onTileSelect: (tileIndex: number) => void, tileset: string, tileSize: number, tileColumns: number }> = ({
-                                                                                                                                          onTileSelect,
-                                                                                                                                          tileset,
-                                                                                                                                          tileSize,
-                                                                                                                                          tileColumns
-                                                                                                                                      }) => {
-    const [tileCount, setTileCount] = useState<number>(0);
+const TilePalette: React.FC<{
+    onTileSelect: (tileIndex: number) => void;
+    tileset: string;
+    tileSize: number;
+    label: string;
 
-    // Dynamically calculate the number of tiles in the tileset image
+}> = ({ label, onTileSelect, tileset, tileSize }) => {
+    const [tileCount, setTileCount] = useState<number>(0);
+    const [tileColumns, setTileColumns] = useState<number>(1);
+    const [tileRows, setTileRows] = useState<number>(1);
+
     useEffect(() => {
         const image = new Image();
         image.src = tileset;
 
         image.onload = () => {
-            console.log('Tileset image loaded');
-            console.log('Image dimensions:', image.width, image.height); // Log image dimensions
+            const width = image.width;
+            const height = image.height;
 
-            const tilesetWidth = image.width;
-            const tilesetHeight = image.height;
+            const columns = Math.floor(width / tileSize);
+            const rows = Math.floor(height / tileSize);
+            const totalTiles = columns * rows;
 
-            const columns = Math.floor(tilesetWidth / tileSize);
-            const rows = Math.floor(tilesetHeight / tileSize);
-
-            const totalTiles = rows * columns;
-            console.log(`Tileset has ${totalTiles} tiles`);
-
+            setTileColumns(columns);
+            setTileRows(rows);
             setTileCount(totalTiles);
-        };
 
-        image.onerror = (error) => {
-            console.error('Error loading tileset image', error);
+            console.log('Image size:', width, height);
+            console.log('Tile columns:', columns);
+            console.log('Tile rows:', rows);
+            console.log(`Tileset has ${totalTiles} tiles`);
         };
     }, [tileset, tileSize]);
-
-    // Create the tile elements based on the tile count
-    const tileArray = Array.from({ length: 64 }, (_, index) => { // Limit to 64 for testing
-        const x = (index % tileColumns) * -tileSize;
-        const y = Math.floor(index / tileColumns) * -tileSize;
-
-        return (
-            <div
-                key={index}
-                style={{
-                    width: tileSize,
-                    height: tileSize,
-                    backgroundImage: `url(${tileset})`,
-                    backgroundPosition: `${x}px ${y}px`,
-                    backgroundRepeat: 'no-repeat',
-                    cursor: 'pointer',
-                    display: 'block',
-                }}
-                onClick={() => onTileSelect(index)}
-            />
-        );
-    });
 
     return (
         <div
             style={{
                 display: 'grid',
                 gridTemplateColumns: `repeat(${tileColumns}, ${tileSize}px)`,
-                gridAutoRows: `${tileSize}px`,
-                overflow: 'auto',  // Allow overflow if necessary
+                gap: '2px',
+                maxHeight: '100vh',
+                overflowY: 'auto',
+                padding: '4px',
             }}
         >
-            {tileArray}
+            {Array.from({ length: tileCount }).map((_, index) => {
+                const col = index % tileColumns;
+                const row = Math.floor(index / tileColumns);
+
+                return (
+                    <div
+                        key={`tile-${index}`}
+                        onClick={() => onTileSelect(index)}
+                        style={{
+                            width: tileSize,
+                            height: tileSize,
+                            backgroundImage: `url(${tileset})`,
+                            backgroundPosition: `-${col * tileSize}px -${row * tileSize}px`,
+                            backgroundSize: `${tileColumns * tileSize}px ${tileRows * tileSize}px`,
+                            imageRendering: 'pixelated',
+                            backgroundRepeat: 'no-repeat',
+                            border: '1px solid #ccc',
+                            boxSizing: 'border-box',
+                            cursor: 'pointer',
+                        }}
+                    />
+                );
+            })}
         </div>
     );
 };
