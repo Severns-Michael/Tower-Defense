@@ -13,20 +13,21 @@ const GameCanvas: React.FC = () => {
     const [editorMode, setEditorMode] = useState(false);
     const [selectedTileType, setSelectedTileType] = useState<number>(0); // Default to the first tile
     const [selectedLayer, setSelectedLayer] = useState<number>(0); // Default to Ground layer
+    const [placingMode, setPlacingMode] = useState<'tile' | 'spawn' | 'end'>('tile');
+
 
     const palettes = [
-        { label: "Grass", tileset: "assets/grass_tileset.png", tileSize: 32 },
-        { label: "Stone", tileset: "assets/tilesets/stone_ground_tileset.png", tileSize: 32 },
-        { label: "Walls", tileset: "assets/tilesets/wall_tileset.png", tileSize: 32 },
-        { label: "Structures", tileset: "assets/tilesets/Struct_tileset.png", tileSize: 32 },
+        {label: "Grass", tileset: "assets/grass_tileset.png", tileSize: 32},
+        {label: "Stone", tileset: "assets/tilesets/stone_ground_tileset.png", tileSize: 32},
+        {label: "Walls", tileset: "assets/tilesets/wall_tileset.png", tileSize: 32},
+        {label: "Structures", tileset: "assets/tilesets/Struct_tileset.png", tileSize: 32},
     ];
     const layers = [
-        { label: 'Ground', key: 'groundLayer' },
-        { label: 'Path', key: 'pathLayer' },
-        { label: 'Obstacles', key: 'obstaclesLayer' },
-        { label: 'Props', key: 'propsLayer' }
+        {label: 'Ground', key: 'groundLayer'},
+        {label: 'Path', key: 'pathLayer'},
+        {label: 'Obstacles', key: 'obstaclesLayer'},
+        {label: 'Props', key: 'propsLayer'}
     ];
-
 
 
     useEffect(() => {
@@ -44,7 +45,7 @@ const GameCanvas: React.FC = () => {
             },
             physics: {
                 default: 'arcade',
-                arcade: { debug: false },
+                arcade: {debug: false},
             },
         };
 
@@ -68,16 +69,43 @@ const GameCanvas: React.FC = () => {
         };
     }, []);
 
+    useEffect(() => {
+        if (gameInstance) {
+            const levelEditorScene = gameInstance.scene.getScene('LevelEditorScene') as LevelEditorScene;
+
+            // Listen for the spawn placement complete event
+            levelEditorScene.events.on('spawn-placed', handlePlacementComplete);
+
+            // Listen for the end placement complete event
+            levelEditorScene.events.on('end-placed', handlePlacementComplete);
+        }
+
+        return () => {
+            if (gameInstance) {
+                const levelEditorScene = gameInstance.scene.getScene('LevelEditorScene') as LevelEditorScene;
+                levelEditorScene.events.removeListener('spawn-placed', handlePlacementComplete);
+                levelEditorScene.events.removeListener('end-placed', handlePlacementComplete);
+            }
+        };
+    }, [gameInstance]);
+
     const handleTileSelect = (tileIndex: number, paletteIndex: number) => {
         setSelectedTileType(tileIndex);
-        console.log(`Selected tile ${tileIndex} from palette ${paletteIndex}`);
+        setPlacingMode('tile');
 
         if (gameInstance) {
             const levelEditorScene = gameInstance.scene.getScene('LevelEditorScene') as LevelEditorScene;
-            levelEditorScene.events.emit('tile-selected', { tileIndex, paletteIndex });
+
+            // Emit cancellation if previously in 'spawn' or 'end' mode
+            levelEditorScene.events.emit('cancel-placement');
+
+            levelEditorScene.events.emit('tile-selected', {
+                tileIndex,
+                paletteIndex,
+                layerIndex: selectedLayer
+            });
         }
     };
-
 
 
     const toggleEditorMode = () => {
@@ -101,6 +129,12 @@ const GameCanvas: React.FC = () => {
 
         setEditorMode(!editorMode);
     };
+    const layerToPaletteMap: Record<number, number[]> = {
+        0: [0], // Ground -> Grass
+        1: [1], // Path -> Stone
+        2: [2], // Obstacles -> Walls
+        3: [3], // Props -> Structures
+    };
 
     const handleTowerSelect = (towerType: TowerType) => {
         setSelectedTower(towerType);
@@ -111,101 +145,130 @@ const GameCanvas: React.FC = () => {
         }
     };
 
-    const toggleLayerVisibility = (layerIndex: number, visibility: boolean) => {
+    const handleLayerSelect = (layerIndex: number) => {
+        setSelectedLayer(layerIndex);
+
         if (gameInstance) {
             const levelEditorScene = gameInstance.scene.getScene('LevelEditorScene') as LevelEditorScene;
-            const layer = levelEditorScene.layers[layerIndex];  // Accessing the layers property
-            layer.setAlpha(visibility ? 1 : 0.5);  // Toggle visibility
+            levelEditorScene.events.emit('layer-selected', layerIndex);
         }
     };
 
-    const handleLayerSelect = (layerIndex: number) => {
-        setSelectedLayer(layerIndex);
+    const handlePlacementComplete = () => {
+        setPlacingMode('tile'); // Switch back to tile mode
+        console.log('Placement complete, switched back to tile mode.');
     };
+
+
+    const downloadMapData = () => {
+        if (!gameInstance) return;
+
+        const levelEditorScene = gameInstance.scene.getScene('LevelEditorScene') as LevelEditorScene;
+
+        // Collect tile data from each layer
+        const mapData = {
+            layers: levelEditorScene.layers.map(layer => {
+                const tiles: number[][] = [];
+                for (let y = 0; y < layer.layer.height; y++) {
+                    const row: number[] = [];
+                    for (let x = 0; x < layer.layer.width; x++) {
+                        const tile = layer.getTileAt(x, y);
+                        row.push(tile ? tile.index : -1);
+                    }
+                    tiles.push(row);
+                }
+                return {
+                    name: layer.layer.name,
+                    tiles
+                };
+            }),
+            spawnPoints: levelEditorScene.spawnPoints || [],  // Ensure it's an array
+            endPoints: levelEditorScene.endPoints || []       // Ensure it's an array
+        };
+
+        // Convert to JSON and download
+        const json = JSON.stringify(mapData, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mapData.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+
     return (
         <div style={{display: 'flex'}}>
             <div ref={gameRef} id="phaser-container"/>
 
-            {/* Layer visibility controls */}
+            {/* Editor UI Panel */}
             {editorMode && (
-                <div style={{marginLeft: '20px', flexDirection: 'column'}}>
-                    <h4>Layer Controls</h4>
+                <div
+                    style={{
+                        marginLeft: '10px',
+                        height: '750px',
+                        position: 'relative',
+                        zIndex: 10,
+                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                        padding: '10px',
+                        overflowY: 'auto',
+                    }}
+                >
+                    <h4>Layer Selector</h4>
                     {layers.map((layer, index) => (
-                        <div key={index}>
-                            <button
-                                onClick={() => handleLayerSelect(index)}
-                                style={{
-                                    backgroundColor: selectedLayer === index ? 'lightblue' : 'white',
-                                    padding: '5px',
-                                    margin: '5px 0',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                {layer.label}
-                            </button>
-                            <input
-                                type="checkbox"
-                                defaultChecked
-                                onChange={(e) => toggleLayerVisibility(index, e.target.checked)}
-                            />
-                            Show {layer.label}
-                        </div>
-
+                        <button
+                            key={index}
+                            style={{
+                                margin: '2px',
+                                backgroundColor: selectedLayer === index ? '#ddd' : '#fff',
+                            }}
+                            onClick={() => handleLayerSelect(index)}
+                        >
+                            {layer.label}
+                        </button>
                     ))}
+
+                    <h4>Tile Palette</h4>
+                    <TilePaletteGroup
+                        palettes={palettes.filter((_, i) =>
+                            layerToPaletteMap[selectedLayer]?.includes(i)
+                        )}
+                        onTileSelect={handleTileSelect}
+                    />
+
+                    <h4>Special Points</h4>
+                    <button
+                        onClick={() => {
+                            setPlacingMode('spawn');
+                            gameInstance?.scene.getScene('LevelEditorScene').events.emit('start-placing-spawn');
+                            gameInstance?.scene.getScene('LevelEditorScene').events.once('spawn-placed', handlePlacementComplete);
+                        }}
+                    >
+                        Place Spawn
+                    </button>
+                    <button
+                        onClick={() => {
+                            setPlacingMode('end');
+                            gameInstance?.scene.getScene('LevelEditorScene').events.emit('start-placing-end');
+                            gameInstance?.scene.getScene('LevelEditorScene').events.once('end-placed', handlePlacementComplete);
+                        }}
+                    >
+                        Place End
+                    </button>
+                    <button onClick={downloadMapData}>Download Map</button>
                 </div>
             )}
 
-            {/* Editor toggle */}
+            {/* Editor Toggle */}
             <div style={{position: 'absolute', top: '20px', left: '20px', zIndex: 20}}>
                 <button onClick={toggleEditorMode}>
                     {editorMode ? 'Play Game' : 'Open Level Editor'}
                 </button>
             </div>
-            <div style={{
-                marginLeft: '10px',
-                height: '750px',
-                position: 'relative',
-                zIndex: 10,
-                backgroundColor: 'rgba(255, 255, 255, 0.5)',  // Add a background color to see the area
-            }}>
-                <TilePaletteGroup palettes={palettes} onTileSelect={handleTileSelect}/>
-            </div>
         </div>
     );
-};
+}
 
 export default GameCanvas;
-
-//     return (
-//         <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-//             {/* Phaser game canvas */}
-//             <div ref={gameRef} id="phaser-container" />
-//
-//             {/* Show TilePalette only in LevelEditor mode */}
-//             {editorMode && (
-//                 <div style={{
-//                     marginLeft: '10px',
-//                     height: '750px',
-//                     position: 'relative',
-//                     zIndex: 10,
-//                 }}>
-//                     <TilePaletteGroup palettes={palettes} onTileSelect={handleTileSelect} />
-//                 </div>
-//             )}
-//
-//             {/* UI Buttons */}
-//             <div style={{
-//                 position: 'absolute',
-//                 top: 20,
-//                 left: 20,
-//                 zIndex: 20
-//             }}>
-//                 <button onClick={() => handleTowerSelect(TowerType.Fire)}>Fire Tower</button>
-//                 <button onClick={toggleEditorMode} style={{ marginLeft: '10px' }}>
-//                     {editorMode ? 'Play Game' : 'Open Level Editor'}
-//                 </button>
-//             </div>
-//         </div>
-//     );
-// }
-// export default GameCanvas;
