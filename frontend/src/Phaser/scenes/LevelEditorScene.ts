@@ -1,5 +1,5 @@
 export class LevelEditorScene extends Phaser.Scene {
-    private gridSize = 16;
+    private gridSize = 32;
     private rows = 20;
     private cols = 30;
     private selectedTileType = 0;  // Default to 0 or some other initial tile
@@ -22,7 +22,7 @@ export class LevelEditorScene extends Phaser.Scene {
 
     preload() {
         // Loading tilesets
-        this.load.image('grass_tileset', 'assets/grass_tileset.png');
+        this.load.image('grass_tileset', 'assets/tilesets/grass_tileset.png');
         this.load.image('stone_tileset', 'assets/tilesets/stone_ground_tileset.png');
         this.load.image('wall_tileset', 'assets/tilesets/wall_tileset.png');
         this.load.image('Struct_tileset', 'assets/tilesets/Struct_tileset.png');
@@ -32,7 +32,15 @@ export class LevelEditorScene extends Phaser.Scene {
 
     create() {
         // Create tilemap with fixed grid size
-        this.tilemap = this.make.tilemap({ tileWidth: 32, tileHeight: 32, width: this.cols, height: this.rows });
+        this.tilemap = this.make.tilemap({
+            tileWidth: this.gridSize,
+            tileHeight: this.gridSize,
+            width: this.cols,
+            height: this.rows,
+        });
+        const layerData: Record<string, number[][]> = {};
+        const mapWidth = this.tilemap.width;
+        const mapHeight = this.tilemap.height;
 
         // Add tilesets to the map
         this.tilesets = [
@@ -210,5 +218,32 @@ export class LevelEditorScene extends Phaser.Scene {
         this.layers.forEach((layer, i) => {
             layer.setAlpha(i === layerIndex ? 1 : 0.5);
         });
+    }
+    getTileData() {
+        const layerData: Record<string, number[][]> = {};
+        const mapWidth = this.tilemap.width;
+        const mapHeight = this.tilemap.height;
+
+        this.layers.forEach(layer => {
+            const layerName = layer.layer.name;
+            const tiles2D: number[][] = Array.from({ length: mapWidth }, () => Array(mapHeight).fill(-1));
+
+            for (let y = 0; y < mapHeight; y++) {
+                for (let x = 0; x < mapWidth; x++) {
+                    const tile = layer.getTileAt(x, y);
+                    tiles2D[x][y] = tile ? tile.index : -1;
+                }
+            }
+
+            layerData[layerName] = tiles2D;
+        });
+
+        return {
+            mapWidth,
+            mapHeight,
+            layers: layerData,
+            spawnPoints: this.spawnPoints,
+            endPoints: this.endPoints,
+        };
     }
 }

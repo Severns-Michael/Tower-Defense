@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import Phaser from 'phaser';
-import { TowerType } from '../Phaser/Utils/TowerData';
+import {TowerType} from '../Phaser/Utils/TowerData';
 import GameScene from '../Phaser/scenes/GameScene';
-import { LevelEditorScene } from '../Phaser/scenes/LevelEditorScene';
+import {LevelEditorScene} from '../Phaser/scenes/LevelEditorScene';
 import TilePalette from "./TilePalette";
 import TilePaletteGroup from "./TilePaletteGroup";
+import { downloadMapJSON} from "../utils/maputils";
 
 const GameCanvas: React.FC = () => {
     const gameRef = useRef<HTMLDivElement>(null);
@@ -159,46 +160,6 @@ const GameCanvas: React.FC = () => {
         console.log('Placement complete, switched back to tile mode.');
     };
 
-
-    const downloadMapData = () => {
-        if (!gameInstance) return;
-
-        const levelEditorScene = gameInstance.scene.getScene('LevelEditorScene') as LevelEditorScene;
-
-        // Collect tile data from each layer
-        const mapData = {
-            layers: levelEditorScene.layers.map(layer => {
-                const tiles: number[][] = [];
-                for (let y = 0; y < layer.layer.height; y++) {
-                    const row: number[] = [];
-                    for (let x = 0; x < layer.layer.width; x++) {
-                        const tile = layer.getTileAt(x, y);
-                        row.push(tile ? tile.index : -1);
-                    }
-                    tiles.push(row);
-                }
-                return {
-                    name: layer.layer.name,
-                    tiles
-                };
-            }),
-            spawnPoints: levelEditorScene.spawnPoints || [],  // Ensure it's an array
-            endPoints: levelEditorScene.endPoints || []       // Ensure it's an array
-        };
-
-        // Convert to JSON and download
-        const json = JSON.stringify(mapData, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'mapData.json';
-        a.click();
-        URL.revokeObjectURL(url);
-    };
-
-
     return (
         <div style={{display: 'flex'}}>
             <div ref={gameRef} id="phaser-container"/>
@@ -257,7 +218,20 @@ const GameCanvas: React.FC = () => {
                     >
                         Place End
                     </button>
-                    <button onClick={downloadMapData}>Download Map</button>
+                    <button
+                        onClick={() => {
+                            if (!gameInstance) return;
+
+                            const levelEditorScene = gameInstance.scene.getScene('LevelEditorScene') as LevelEditorScene;
+                            const tilemap = levelEditorScene.getTileData(); // Get tile data from the scene
+
+                            // Pass the correct properties from tilemap
+                            downloadMapJSON(tilemap.layers, tilemap.mapWidth, tilemap.mapHeight, tilemap.spawnPoints, tilemap.endPoints);
+                        }}
+                    >
+                        Download Map
+                    </button>
+
                 </div>
             )}
 
@@ -272,3 +246,4 @@ const GameCanvas: React.FC = () => {
 }
 
 export default GameCanvas;
+

@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import EventBus from '../Utils/EventBus';
 import { Tower } from "../Objects/Tower";
 import { Enemy } from "../Objects/Enemy";
 import { TowerType } from '../Utils/TowerData';
@@ -15,71 +14,107 @@ export default class MainScene extends Phaser.Scene {
     enemiesRemaining: number = 0;
     gameOver: boolean = false;
     selectedTowerType: TowerType | null = null;
-    private tileSize: number = 64;
-    private tileScale: number = 2;
+    private tileSize: number = 32;
+    private tileScale: number = 1;
+
+    // New properties for spawn and end points
+    spawnPoints: { x: number, y: number }[] = [];
+    endPoints: Phaser.Math.Vector2[] = []; // Using Phaser.Vector2[]
 
     constructor() {
         super('GameScene');
     }
 
-
+    preload() {
+        // Load tile images
+        this.load.json('map', 'assets/custom_map2.json');
+        this.load.image('grass_tileset', 'assets/tilesets/grass_tileset.png');
+        this.load.image('stone_tileset', 'assets/tilesets/stone_ground_tileset.png');
+        this.load.image('wall_tileset', 'assets/tilesets/wall_tileset.png');
+        this.load.image('Struct_tileset', 'assets/tilesets/Struct_tileset.png');
+    }
 
     create() {
-        const map = this.make.tilemap({ key: 'map' });
+        const mapData = this.cache.json.get('map');
+        console.log('Map from cache:', this.cache.json.get('map'));
 
-        // Define the path for enemies
-        this.path = [
-            new Phaser.Math.Vector2(100, 100),
-            new Phaser.Math.Vector2(100, 300),
-            new Phaser.Math.Vector2(300, 300),
-            new Phaser.Math.Vector2(300, 175),
-            new Phaser.Math.Vector2(500, 175),
-            new Phaser.Math.Vector2(500, 300),
-            new Phaser.Math.Vector2(850, 300),
-            new Phaser.Math.Vector2(850, 175),
-            new Phaser.Math.Vector2(675, 175),
-        ];
 
-        // Handle player input
-        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            const tileX = Math.floor(pointer.x / (this.tileSize * this.tileScale));
-            const tileY = Math.floor(pointer.y / (this.tileSize * this.tileScale));
-
-            console.log("Clicked tile:", tileX, tileY); // Check if the coordinates are correct
-
-            // Check if tileX and tileY are within bounds of the logicMap
-            if (tileY < 0 || tileY >= this.logicMap.length || tileX < 0 || tileX >= this.logicMap[tileY].length) {
-                console.log("Clicked outside valid tile area.");
-                return;
+        if (!mapData) {
+            console.error('Map or tileset data not found!');
+            return;
+        }
+        mapData.layers.forEach((layer: any) => {
+            if (layer.type === 'tilelayer') {
+                this.createLayerFromTiles(
+                    layer.data,
+                    layer.name,
+                    mapData.tilesets,
+                    mapData.width
+                );
             }
+        });
+        // Define tilesets
+        const tilesets = {
+            'grass_tileset': this.textures.get('grass_tileset'),
+            'stone_tileset': this.textures.get('stone_tileset'),
+            'wall_tileset': this.textures.get('wall_tileset'),
+            'Struct_tileset': this.textures.get('Struct_tileset')
+        };
+        this.createLayerFromTiles(mapData.layers[0].data, 'Ground', tilesets, mapData);
+        this.logicMap = mapData.logicMap;
 
-            const logicValue = this.logicMap[tileY][tileX];
-            if (!this.selectedTowerType) {
-                console.log("No tower selected!");
-                return;
-            }
+        this.spawnPoints = mapData.spawnPoints;
+        this.endPoints = mapData.endPoints.map((point: { x: number, y: number }) => new Phaser.Math.Vector2(point.x, point.y)); // Convert to Phaser.Math.Vector2
 
-            if (logicValue === 9) {
-                console.log("Can't place tower here!");
-                return;
-            }
 
-            this.placeTower(tileX, tileY, this.selectedTowerType);
-            this.selectedTowerType = null; // reset after placing
+
+        this.setupInputHandlers();
+
+        // Create enemies at spawn points
+        this.spawnPoints.forEach(spawnPoint => {
+            this.createEnemy(spawnPoint.x, spawnPoint.y);
+        });
+    }
+
+    private createLayerFromTiles(
+        tiles: number[],
+        layerName: string,
+        tilesets: any,
+        mapWidth: number
+    ) {
+        const group = this.add.group();
+
+        tiles.forEach((tileIndex, i) => {
+            if (tileIndex === 0) return; // 0 = no tile
+
+            const x = (i % mapWidth) * this.tileSize * this.tileScale;
+            const y = Math.floor(i / mapWidth) * this.tileSize * this.tileScale;
+
+            const tileKey = this.getTilesetKeyForLayer(layerName);
+            const tile = this.add
+                .image(x, y, tileKey)
+                .setOrigin(0)
+                .setScale(this.tileScale);
+
+            group.add(tile);
         });
 
-        // Example towers and enemies
-        this.towers.push(new Tower(this, 300, 350, TowerType.Fire));
-        this.enemies.push(new Enemy(this, 100, 100, this.path));
+        return group;
+    }
 
-        // Place tower event listener
-        this.events.on('tower-selected', (towerType: TowerType) => {
-            this.selectedTowerType = towerType;
-            console.log(`Tower selected:`, this.selectedTowerType);
-        });
-
-        // Start round logic
-        console.table(this.logicMap);
+    private getTilesetKeyForLayer(layerName: string): string {
+        switch (layerName) {
+            case 'Ground': return 'grass_tileset';
+            case 'Path': return 'stone_tileset';
+            case 'Obstacles': return 'wall_tileset';
+            case 'Props': return 'Struct_tileset';
+            default: return 'grass_tileset';
+        }
+    }
+    // Create an enemy at a specific spawn point
+    private createEnemy(x: number, y: number) {
+        const enemy = new Enemy(this, x * this.tileSize * this.tileScale, y * this.tileSize * this.tileScale, this.endPoints);
+        this.enemies.push(enemy);
     }
 
     update(time: number, delta: number) {
@@ -90,39 +125,7 @@ export default class MainScene extends Phaser.Scene {
         });
     }
 
-    shutdown() {
-        EventBus.off('place-tower', this.placeTower, this);
-    }
-
-    upgradeTower(towerId: string, newLevel: number) {
-        EventBus.emit('tower-upgraded', { towerId, newLevel });
-    }
-
-    startRound() {
-        if (this.currentRound > this.maxRounds) {
-            console.log("Game Won!");
-            this.gameOver = true;
-            return;
-        }
-
-        console.log(`Starting Round ${this.currentRound}`);
-        const enemyCount = this.currentRound;
-        this.enemiesRemaining = enemyCount;
-
-        for (let i = 0; i < enemyCount; i++) {
-            this.time.delayedCall(i * 500, () => {
-                const newEnemy = new Enemy(this, this.path[0].x, this.path[0].y, this.path);
-                this.enemies.push(newEnemy);
-            });
-        }
-    }
-
-    private getTileAt(x: number, y: number): { x: number, y: number } | null {
-        // Convert world coords to tile coords and check if valid
-        return { x: Math.floor(x / 32), y: Math.floor(y / 32) }; // example for 32x32 grid
-    }
-
-    private canPlaceTowerHere(x: number, y: number): boolean {
+    canPlaceTowerHere(x: number, y: number): boolean {
         // Ensure that the coordinates are within bounds of the logicMap
         if (y < 0 || y >= this.logicMap.length || x < 0 || x >= this.logicMap[y].length) {
             console.log("Invalid tile coordinates:", x, y);
@@ -154,8 +157,28 @@ export default class MainScene extends Phaser.Scene {
         this.towers.push(newTower);
     }
 
-    selectTower(towerType: TowerType) {
-        this.selectedTowerType = towerType;
-        console.log("Tower selected in scene:", this.selectedTowerType);
+    setupInputHandlers() {
+        // Handle pointer clicks for tower placement
+        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            const tileX = Math.floor(pointer.x / (this.tileSize * this.tileScale));
+            const tileY = Math.floor(pointer.y / (this.tileSize * this.tileScale));
+            if (this.canPlaceTowerHere(tileX, tileY)) {
+                this.placeTower(tileX, tileY, this.selectedTowerType!);
+            }
+        });
+
+        // Optionally: Handle tower selection via a UI event or hotkeys
+        this.events.on('tower-selected', (towerType: TowerType) => {
+            this.selectedTowerType = towerType;
+        });
+
+        // Handle zooming (optional)
+        this.input.on('wheel', (pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.GameObject[]) => {
+            const scaleChange = pointer.deltaY > 0 ? 0.1 : -0.1;
+            this.cameras.main.zoom += scaleChange;
+            this.cameras.main.zoom = Phaser.Math.Clamp(this.cameras.main.zoom, 0.5, 2); // Clamped zoom
+        });
     }
+
+
 }
