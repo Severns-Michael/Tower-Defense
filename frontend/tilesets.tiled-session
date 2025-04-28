@@ -3,13 +3,13 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "public/assets/map_basic4.json",
+    "activeFile": "public/assets/tilesets/struct_tileset.json",
     "expandedProjectPaths": [
+        ".",
+        "public/assets/free-2d-top-down-pixel-dungeon-asset-pack",
         "public",
         "public/assets/free-2d-top-down-pixel-dungeon-asset-pack/Tiled_files",
-        ".",
-        "public/assets",
-        "public/assets/free-2d-top-down-pixel-dungeon-asset-pack"
+        "public/assets"
     ],
     "file.lastUsedOpenFilter": "All Files (*)",
     "fileStates": {
@@ -118,6 +118,22 @@
             "scaleInDock": 1,
             "scaleInEditor": 1
         },
+        "public/assets/tilesets/grass_tileset.tsj": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "public/assets/tilesets/stone_tileset.json": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "public/assets/tilesets/struct_tileset.json": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "public/assets/tilesets/wall_tileset.json": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
         "public/assets/walls_floor.tmx": {
             "scaleInDock": 1,
             "scaleInEditor": 1
@@ -147,11 +163,17 @@
     "map.tileHeight": 16,
     "map.tileWidth": 16,
     "openFiles": [
-        "public/assets/map_basic4.json",
-        "public/assets/walls_floor.tsx"
+        "public/assets/tilesets/grass_tileset.tsj",
+        "public/assets/tilesets/stone_tileset.json",
+        "public/assets/tilesets/wall_tileset.json",
+        "public/assets/tilesets/struct_tileset.json"
     ],
     "project": "tilesets.tiled-project",
     "recentFiles": [
+        "public/assets/tilesets/grass_tileset.tsj",
+        "public/assets/tilesets/stone_tileset.json",
+        "public/assets/tilesets/wall_tileset.json",
+        "public/assets/tilesets/struct_tileset.json",
         "public/assets/walls_floor.tsx",
         "public/assets/map_basic4.json",
         "public/assets/free-2d-top-down-pixel-dungeon-asset-pack/Tiled_files/Dungeon1.tmx",
@@ -159,11 +181,7 @@
         "public/assets/map_basic.tmx",
         "public/assets/map_basic3.json",
         "public/assets/map_basic2.json",
-        "public/assets/map basic.tmx",
-        "public/assets/water.png",
-        "dung floorand walls.tsx",
-        "water.png",
-        "Water_coasts_animation.tsx"
+        "public/assets/map basic.tmx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {

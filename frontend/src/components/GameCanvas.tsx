@@ -271,13 +271,25 @@ const GameCanvas: React.FC = () => {
                 >
                     <h4>Select Tower</h4>
                     <button
-                        style={{ marginBottom: '5px' }}
+                        style={{marginBottom: '5px'}}
                         onClick={() => handleTowerSelect(TowerType.Fire)}
                     >
                         Fire Tower
                     </button>
                     {/* Add more towers later */}
+
+                    <h4>Round Control</h4>
+                    <button
+                        onClick={() => {
+                            if (!gameInstance) return;
+                            const scene = gameInstance.scene.getScene('GameScene') as GameScene;
+                            scene.roundManager?.startNextRound();
+                        }}
+                    >
+                        Start Next Round
+                    </button>
                 </div>
+
             )}
 
             {/* Editor Toggle */}

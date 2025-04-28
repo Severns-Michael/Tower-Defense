@@ -8,9 +8,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
 
     constructor(scene: Phaser.Scene, x: number, y: number, target: Enemy) {
         super(scene, x, y, 'projectile');  // 'projectile' should be a loaded asset key
-
         this.target = target;
-
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
@@ -29,7 +27,6 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        // Recalculate velocity toward the target each frame
         const angle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
         const velocityX = Math.cos(angle) * this.speed;
         const velocityY = Math.sin(angle) * this.speed;

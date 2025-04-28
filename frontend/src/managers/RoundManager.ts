@@ -1,9 +1,11 @@
-import { GameRound, GameWave } from "../types/GameWaves";
+import {GameRound, GameWave} from "../types/GameWaves";
+
 
 type RoundEvents = {
   onRoundStart?: (round: number) => void;
   onWaveStart?: (wave: number) => void;
   onAllRoundsComplete?: () => void;
+  spawnEnemy?: (type: string) => void;
 };
 
 export class RoundManager {
@@ -11,6 +13,7 @@ export class RoundManager {
   private currentRoundIndex = 0;
   private currentWaveIndex = 0;
   private isRunning = false;
+  private isRoundActive = false;
 
   private events: RoundEvents;
 
@@ -19,15 +22,11 @@ export class RoundManager {
     this.events = events;
   }
 
-  startRounds() {
-    this.isRunning = true;
-    this.startNextRound();
-  }
+  startNextRound() {
+    if (this.isRoundActive) return; // don't allow starting mid-round
 
-  private startNextRound() {
     if (this.currentRoundIndex >= this.rounds.length) {
       this.events.onAllRoundsComplete?.();
-      this.isRunning = false;
       return;
     }
 
@@ -35,6 +34,8 @@ export class RoundManager {
     this.events.onRoundStart?.(round.roundNumber);
 
     this.currentWaveIndex = 0;
+    this.isRoundActive = true;
+
     this.startNextWave();
   }
 
@@ -44,13 +45,14 @@ export class RoundManager {
 
     this.events.onWaveStart?.(this.currentWaveIndex + 1);
 
-    // Simulate spawning
     this.spawnWave(wave, () => {
       this.currentWaveIndex++;
       if (this.currentWaveIndex >= round.waves.length) {
+        // End of the round
+        this.isRoundActive = false;
         this.currentRoundIndex++;
-        this.startNextRound();
       } else {
+        // Go to next wave in current round
         this.startNextWave();
       }
     });
@@ -58,14 +60,15 @@ export class RoundManager {
 
   private spawnWave(wave: GameWave, onComplete: () => void) {
     let enemyCount = 0;
-    wave.enemies.forEach((config) => {
+    const totalEnemies = wave.enemies.reduce((sum, e) => sum + e.count, 0);
+
+    wave.enemies.forEach(config => {
       for (let i = 0; i < config.count; i++) {
         setTimeout(() => {
-          // Replace with your game's spawn logic:
-          console.log(`Spawned ${config.type}`);
-
+          this.events.spawnEnemy?.(config.type);
           enemyCount++;
-          if (enemyCount === wave.enemies.reduce((sum, e) => sum + e.count, 0)) {
+
+          if (enemyCount === totalEnemies) {
             onComplete();
           }
         }, i * config.spawnDelay);

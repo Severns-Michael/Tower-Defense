@@ -2,13 +2,18 @@ import Phaser from 'phaser';
 import { Tower } from '../Objects/Tower';
 import { Enemy } from '../Objects/Enemy';
 import { TowerType } from '../Utils/TowerData';
+import {RoundManager} from "../../managers/RoundManager";
+import { waves } from '../../types/waves';
+
 
 type LayerName = 'Ground' | 'Path' | 'Obstacles' | 'Props';
+
 
 export default class MainScene extends Phaser.Scene {
     towers: Tower[] = [];
     enemies: Enemy[] = [];
     path: Phaser.Math.Vector2[] = [];
+    roundManager!: RoundManager;
     private highlightTile?: Phaser.GameObjects.Rectangle;
     currentRound: number = 1;
     maxRounds: number = 5;
@@ -103,18 +108,32 @@ export default class MainScene extends Phaser.Scene {
         }
 
 
+
         const path = this.extractPathFromLayer(pathLayerz.data, this.mapData.width);
+
+        this.path = path;
 
 
         // Now, draw the path on the screen
         this.drawPath(path);
 
-        // Create enemies with the extracted path
-        this.spawnPoints.forEach(spawnPoint => {
-            this.createEnemy(spawnPoint.x, spawnPoint.y, path);  // Pass the path to each enemy
-        });
+        this.roundManager = new RoundManager(waves, {
+            onRoundStart: (round) => {
+                console.log(`Round ${round} started`);
 
+            },
+            onWaveStart: (wave) => {
+                console.log(`Wave ${wave} started`);
+            },
+            onAllRoundsComplete: () => {
+                console.log('All rounds complete!');
+            },
+            spawnEnemy: (type: string) => {
+                this.spawnEnemy(type);
+            }
+        });
     }
+
 
     private drawPath(path: Phaser.Math.Vector2[]) {
         const graphics = this.add.graphics();
@@ -134,6 +153,18 @@ export default class MainScene extends Phaser.Scene {
 
         graphics.strokePath();
     }
+    spawnEnemy(type: string) {
+        const spawn = this.spawnPoints[0];
+        const path = this.path;
+
+        // Right now you only have one default enemy
+        this.createEnemy(spawn.x, spawn.y, path);
+
+        // Later, when you have "tank", "fast", etc., you can expand here
+    }
+
+
+
 
 
     private createEnemy(x: number, y: number, path: Phaser.Math.Vector2[]) {
