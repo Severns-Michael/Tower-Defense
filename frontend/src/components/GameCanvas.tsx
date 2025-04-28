@@ -14,7 +14,7 @@ const GameCanvas: React.FC = () => {
     const [editorMode, setEditorMode] = useState(false);
     const [selectedTileType, setSelectedTileType] = useState<number>(0); // Default to the first tile
     const [selectedLayer, setSelectedLayer] = useState<number>(0); // Default to Ground layer
-    const [placingMode, setPlacingMode] = useState<'tile' | 'spawn' | 'end'>('tile');
+    const [placingMode, setPlacingMode] = useState<'tile' | 'spawn' | 'end' | 'tower'>('tile');
 
 
     const palettes = [
@@ -190,6 +190,28 @@ const GameCanvas: React.FC = () => {
                             {layer.label}
                         </button>
                     ))}
+                    {!editorMode && (
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: '80px',
+                                right: '20px', // <-- RIGHT SIDE
+                                zIndex: 20,
+                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                padding: '10px',
+                                borderRadius: '8px'
+                            }}
+                        >
+                            <h4>Select Tower</h4>
+                            <button
+                                style={{ marginBottom: '5px' }}
+                                onClick={() => handleTowerSelect(TowerType.Fire)}
+                            >
+                                Fire Tower
+                            </button>
+                            {/* Add more tower buttons here if you want later */}
+                        </div>
+                    )}
 
                     <h4>Tile Palette</h4>
                     <TilePaletteGroup
@@ -232,6 +254,29 @@ const GameCanvas: React.FC = () => {
                         Download Map
                     </button>
 
+                </div>
+            )}
+            {/* Tower Selection - show only when NOT in editorMode */}
+            {!editorMode && (
+                <div
+                    style={{
+                        marginLeft: '10px',
+                        height: '750px',
+                        position: 'relative',
+                        zIndex: 10,
+                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                        padding: '10px',
+                        overflowY: 'auto',
+                    }}
+                >
+                    <h4>Select Tower</h4>
+                    <button
+                        style={{ marginBottom: '5px' }}
+                        onClick={() => handleTowerSelect(TowerType.Fire)}
+                    >
+                        Fire Tower
+                    </button>
+                    {/* Add more towers later */}
                 </div>
             )}
 
