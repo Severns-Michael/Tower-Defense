@@ -8,7 +8,6 @@ type LayerName = 'Ground' | 'Path' | 'Obstacles' | 'Props';
 export default class MainScene extends Phaser.Scene {
     towers: Tower[] = [];
     enemies: Enemy[] = [];
-    logicMap: number[][] = [];
     path: Phaser.Math.Vector2[] = [];
     private highlightTile?: Phaser.GameObjects.Rectangle;
     currentRound: number = 1;
@@ -27,6 +26,10 @@ export default class MainScene extends Phaser.Scene {
         Obstacles: 2,
         Props: 3,
     };
+    groundLayer!: Phaser.Tilemaps.TilemapLayer;
+    pathLayer!: Phaser.Tilemaps.TilemapLayer;
+    obstaclesLayer!: Phaser.Tilemaps.TilemapLayer;
+    propsLayer!: Phaser.Tilemaps.TilemapLayer;
 
     private tilemap: Phaser.Tilemaps.Tilemap | null = null;
 
@@ -47,86 +50,50 @@ export default class MainScene extends Phaser.Scene {
 
     create() {
         this.mapData = this.cache.json.get('map');
-        this.tilemap = this.make.tilemap({ key: 'map' });
 
-        // Add tilesets to the tilemap (each layer will use different tileset)
+        // Create the base Tilemap
+        this.tilemap = this.make.tilemap({
+            tileWidth: this.tileSize,
+            tileHeight: this.tileSize,
+            width: this.mapData.width,
+            height: this.mapData.height
+        });
+
+        // Load tilesets
         const grassTileset = this.tilemap.addTilesetImage('grass_tileset');
         const stoneTileset = this.tilemap.addTilesetImage('stone_tileset');
         const wallTileset = this.tilemap.addTilesetImage('wall_tileset');
         const structTileset = this.tilemap.addTilesetImage('Struct_tileset');
 
-        // Ensure tilesets are not null
-        if (grassTileset && stoneTileset && wallTileset && structTileset) {
-            // Create layers using the correct tileset
-            const groundLayer = this.tilemap.createLayer('Ground', grassTileset, 0, 0);
-            const pathLayer = this.tilemap.createLayer('Path', stoneTileset, 0, 0);
-            const obstaclesLayer = this.tilemap.createLayer('Obstacles', wallTileset, 0, 0);
-            const propsLayer = this.tilemap.createLayer('Props', structTileset, 0, 0);
-
-            // Now set collisions for the relevant layers, ensuring layers are not null
-            if (obstaclesLayer) {
-                obstaclesLayer.setCollisionByProperty({ collides: true });
-            } else {
-                console.error('Obstacles layer is null!');
-            }
-
-            if (pathLayer) {
-                pathLayer.setCollisionByProperty({ collides: false });
-            } else {
-                console.error('Path layer is null!');
-            }
-        } else {
-            console.error('One or more tilesets failed to load.');
-        }
-
-        if (!this.mapData) {
-            console.error('Map or tileset data not found!');
+        if (!grassTileset || !stoneTileset || !wallTileset || !structTileset) {
+            console.error('Tilesets not found!');
             return;
         }
 
+        // Create blank layers
+        const groundLayer = this.tilemap.createBlankLayer('Ground', grassTileset)!;
+        const pathLayer = this.tilemap.createBlankLayer('Path', stoneTileset)!;
+        const obstaclesLayer = this.tilemap.createBlankLayer('Obstacles', wallTileset)!;
+        const propsLayer = this.tilemap.createBlankLayer('Props', structTileset)!;
 
-        // Log layers to check their structure
-        this.mapData.layers.forEach((layer: any) => {
-            if (layer.type !== 'tilelayer') return;
+        // Fill in the tiles from your custom JSON
+        this.populateLayer(this.mapData.layers, 'Ground', groundLayer);
+        this.populateLayer(this.mapData.layers, 'Path', pathLayer);
+        this.populateLayer(this.mapData.layers, 'Obstacles', obstaclesLayer);
+        this.populateLayer(this.mapData.layers, 'Props', propsLayer);
 
-            const layerName = layer.name as LayerName;
-            const tilesetKey = {
-                Ground: 'grass_tileset',
-                Path: 'stone_tileset',
-                Obstacles: 'wall_tileset',
-                Props: 'Struct_tileset',
-            }[layerName];
-
-
-            if (!tilesetKey) {
-                console.warn(`Unknown layer: ${layerName}`);
-                return;
-            }
-
-            this.createLayerFromTiles(layer.data, layerName, tilesetKey, this.mapData.width);
-
-        });
-
-
-        const tilesets = {
-            'Ground': 'grass_tileset',
-            'Path': 'stone_tileset',
-            'Obstacles': 'wall_tileset',
-            'Props': 'Struct_tileset',
-        };
-
-        console.log("map layers",this.mapData.layers);
-
-        this.logicMap = this.mapData.logicMap;
         this.spawnPoints = this.mapData.spawnPoints;
         this.endPoints = this.mapData.endPoints.map((point: { x: number, y: number }) => new Phaser.Math.Vector2(point.x, point.y));
-        console.log('Tilemap layers:', this.tilemap.layers);
-        this.tilemap.layers.forEach((layer: any) => {
-            console.log('Layer name:', layer.name);
-        });
 
+        // Set up collision for obstacles
+        obstaclesLayer.setCollisionBetween(0, 999);  // Mark all tiles as colliding
+
+        // Save the layers if you want to access them later
+        this.groundLayer = groundLayer;
+        this.pathLayer = pathLayer;
+        this.obstaclesLayer = obstaclesLayer;
+        this.propsLayer = propsLayer;
         this.setupInputHandlers();
-        this.addCollisionDebugGraphics();
 
         // Extract path and create enemies
         const pathLayerz = this.mapData.layers.find((layer: any) => layer.name === 'Path');
@@ -146,7 +113,6 @@ export default class MainScene extends Phaser.Scene {
         this.spawnPoints.forEach(spawnPoint => {
             this.createEnemy(spawnPoint.x, spawnPoint.y, path);  // Pass the path to each enemy
         });
-        const graphics = this.add.graphics({ lineStyle: { width: 2, color: 0xff0000 } });
 
     }
 
@@ -170,43 +136,6 @@ export default class MainScene extends Phaser.Scene {
     }
 
 
-
-
-
-    private createLayerFromTiles(tiles: number[], layerName: LayerName, tilesetKey: string, mapWidth: number) {
-        const group = this.add.group();
-
-        tiles.forEach((tileIndex, i) => {
-            if (tileIndex === -1) return; // Skip empty spaces
-
-            const x = (i % mapWidth) * this.tileSize * this.tileScale;
-            const y = Math.floor(i / mapWidth) * this.tileSize * this.tileScale;
-
-            const frameIndex = tileIndex; // 0-based frame numbers match!
-
-            this.add.image(x, y, tilesetKey, frameIndex)
-                .setOrigin(0)
-                .setScale(this.tileScale)
-                .setDepth((this.layerDepthMap)[layerName]);
-
-        });
-
-        const graphics = this.add.graphics();
-        graphics.lineStyle(1, 0xffffff, 0.3); // white lines, 30% opacity
-
-        for (let x = 0; x <= this.mapData.width; x++) {
-            graphics.moveTo(x * this.tileSize * this.tileScale, 0);
-            graphics.lineTo(x * this.tileSize * this.tileScale, this.mapData.height * this.tileSize * this.tileScale);
-        }
-
-        for (let y = 0; y <= this.mapData.height; y++) {
-            graphics.moveTo(0, y * this.tileSize * this.tileScale);
-            graphics.lineTo(this.mapData.width * this.tileSize * this.tileScale, y * this.tileSize * this.tileScale);
-        }
-
-        graphics.strokePath();
-    }
-
     private createEnemy(x: number, y: number, path: Phaser.Math.Vector2[]) {
         // Center the enemy on the path tile
         const enemy = new Enemy(this, x, y, path);
@@ -224,41 +153,49 @@ export default class MainScene extends Phaser.Scene {
         this.enemies.forEach(enemy => {
             enemy.update(time, delta);
         });
+        this.towers.forEach(tower => {
+            tower.update(time, delta, this.enemies);
+        });
 
     }
 
-    canPlaceTowerHere(x: number, y: number): boolean {
-        const groundLayer = this.mapData.layers[0].tilemapLayer;
-
-        // Check if groundLayer is defined before proceeding
-        if (!groundLayer) {
-            console.error('Ground layer not found.');
-            return false; // Early return if groundLayer is undefined
+    canPlaceTowerHere(tileX: number, tileY: number): boolean {
+        if (!this.groundLayer || !this.obstaclesLayer || !this.pathLayer) {
+            console.error('One or more required layers missing.');
+            return false;
         }
 
-        const groundLayerAsUnknown = groundLayer as unknown;
+        const groundTile = this.groundLayer.getTileAt(tileX, tileY);
+        const pathTile = this.pathLayer.getTileAt(tileX, tileY);
+        const obstacleTile = this.obstaclesLayer.getTileAt(tileX, tileY);
 
-        if (groundLayerAsUnknown && (groundLayerAsUnknown as Phaser.Tilemaps.TilemapLayer).getTileAt) {
-            // Cast to TilemapLayer safely
-            const tileLayer = groundLayerAsUnknown as Phaser.Tilemaps.TilemapLayer;
-
-            // Check if tileLayer is valid before accessing getTileAt
-            const tile = tileLayer.getTileAt(x, y);
-
-            if (tile) {
-                if (tile.index !== -1) {
-                    return true;  // Tile is valid for placing a tower
-                } else {
-                    console.log(`Tile at (${x}, ${y}) is not a valid ground tile.`);
-                }
-            } else {
-                console.error(`No tile found at position (${x}, ${y}).`);
-            }
-        } else {
-            console.error('Ground layer is not a TilemapLayer or is missing getTileAt.');
+        if (!groundTile) {
+            console.log('No ground tile here.');
+            return false;
         }
 
-        return false;  // Tile isn't valid for placing a tower
+        if (obstacleTile) {
+            console.log('Obstacle blocking the tile.');
+            return false;
+        }
+
+        if (pathTile) {
+            console.log('Path is blocking the tile.');
+            return false;
+        }
+
+        // NEW: Check if there's already a tower at this tile
+        const tileSize = this.tileSize * this.tileScale;
+        const existingTower = this.towers.find(tower => {
+            return Math.floor(tower.x / tileSize) === tileX && Math.floor(tower.y / tileSize) === tileY;
+        });
+
+        if (existingTower) {
+            console.log('Already a tower here.');
+            return false;
+        }
+
+        return true;
     }
 
     placeTower(x: number, y: number, towerType: TowerType) {
@@ -267,10 +204,11 @@ export default class MainScene extends Phaser.Scene {
             return;
         }
 
+        const tileSize = this.tileSize * this.tileScale;
         const newTower = new Tower(
             this,
-            x * this.tileSize * this.tileScale,
-            y * this.tileSize * this.tileScale,
+            x * tileSize + tileSize / 2,
+            y * tileSize + tileSize / 2,
             towerType
         );
 
@@ -348,6 +286,25 @@ export default class MainScene extends Phaser.Scene {
         }
 
         return path;
+    }
+    private populateLayer(layersData: any[], targetName: string, tilemapLayer: Phaser.Tilemaps.TilemapLayer) {
+        const layerData = layersData.find(layer => layer.name === targetName);
+
+        if (!layerData) {
+            console.warn(`Layer ${targetName} not found in map data`);
+            return;
+        }
+
+        layerData.data.forEach((tileIndex: number, i: number) => {
+            const x = i % this.mapData.width;
+            const y = Math.floor(i / this.mapData.width);
+
+            if (tileIndex !== -1) {
+                tilemapLayer.putTileAt(tileIndex, x, y);
+            }
+        });
+
+        tilemapLayer.setDepth(this.layerDepthMap[targetName as LayerName] || 0);
     }
 
 

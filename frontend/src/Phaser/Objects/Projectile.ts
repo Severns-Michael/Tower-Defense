@@ -7,7 +7,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     target: Enemy;
 
     constructor(scene: Phaser.Scene, x: number, y: number, target: Enemy) {
-        super(scene, x, y, 'projectile');  // Make sure 'projectile' key is loaded!
+        super(scene, x, y, 'projectile');  // 'projectile' should be a loaded asset key
 
         this.target = target;
 
@@ -16,16 +16,27 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
 
         this.setActive(true);
         this.setVisible(true);
+        this.setOrigin(0.5); // Centered origin looks better
 
-        // Fire toward the enemy
         scene.physics.moveToObject(this, target, this.speed);
     }
 
     preUpdate(time: number, delta: number) {
         super.preUpdate(time, delta);
 
-        if (!this.active || !this.target || !this.target.active) return;
+        if (!this.active || !this.target || !this.target.active) {
+            this.destroy();
+            return;
+        }
 
+        // Recalculate velocity toward the target each frame
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
+        const velocityX = Math.cos(angle) * this.speed;
+        const velocityY = Math.sin(angle) * this.speed;
+
+        this.setVelocity(velocityX, velocityY);
+
+        // Check collision distance
         const dist = Phaser.Math.Distance.Between(this.x, this.y, this.target.x, this.target.y);
         if (dist < 10) {
             this.target.takeDamage(this.damage);
