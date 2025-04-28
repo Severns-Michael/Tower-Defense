@@ -25,7 +25,7 @@ export class Tower extends Phaser.GameObjects.Sprite {
     }
 // see if it can shoot due to cooldown or attackspeed
     canShoot(time: number): boolean {
-        return time - this.lastShotTime >= this.cooldown;
+        return time - this.lastShotTime >= this.rateOfFire;
     }
 //check for taget is in range and ready to shoot
     update(time: number, delta: number, enemies: Enemy[]) {
@@ -35,12 +35,13 @@ export class Tower extends Phaser.GameObjects.Sprite {
         }
     }
 //shoot
-    shoot(enemy: Enemy, time: number) {
-        if (!this.lastShotTime || time > this.lastShotTime + this.rateOfFire) {
-            this.lastShotTime = time;
-            new Projectile(this.scene, this.x, this.y, enemy);
-        }
+shoot(enemy: Enemy, time: number) {
+    if (this.canShoot(time)) {
+        this.rotation = Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y);
+        this.lastShotTime = time;
+        new Projectile(this.scene, this.x, this.y, enemy);
     }
+}
 
     getTarget(enemies: Enemy[]): Enemy | null {
         const closest = enemies
