@@ -38,9 +38,6 @@ export class LevelEditorScene extends Phaser.Scene {
             width: this.cols,
             height: this.rows,
         });
-        const layerData: Record<string, number[][]> = {};
-        const mapWidth = this.tilemap.width;
-        const mapHeight = this.tilemap.height;
 
         // Add tilesets to the map
         this.tilesets = [
@@ -166,11 +163,12 @@ export class LevelEditorScene extends Phaser.Scene {
                 this.lastTileX = tileX;
                 this.lastTileY = tileY;
 
-                // Prevent placing outside the grid boundaries
-                if (tileX >= 0 && tileX < this.cols && tileY >= 0 && tileY < this.rows) {
-                    // Place tile at the new location
-                    this.placeTile(tileX, tileY);
+                if (tileX < 0 || tileX >= this.cols || tileY < 0 || tileY >= this.rows) {
+                    return;
                 }
+
+                // 🛠️ ACTUALLY PLACE THE TILE HERE
+                this.placeTile(tileX, tileY);
             }
         }
     }
@@ -219,6 +217,7 @@ export class LevelEditorScene extends Phaser.Scene {
             layer.setAlpha(i === layerIndex ? 1 : 0.5);
         });
     }
+
     getTileData() {
         const layerData: Record<string, number[][]> = {};
         const mapWidth = this.tilemap.width;
@@ -226,12 +225,12 @@ export class LevelEditorScene extends Phaser.Scene {
 
         this.layers.forEach(layer => {
             const layerName = layer.layer.name;
-            const tiles2D: number[][] = Array.from({ length: mapWidth }, () => Array(mapHeight).fill(-1));
+            const tiles2D: number[][] = Array.from({ length: mapHeight }, () => Array(mapWidth).fill(-1));
 
             for (let y = 0; y < mapHeight; y++) {
                 for (let x = 0; x < mapWidth; x++) {
                     const tile = layer.getTileAt(x, y);
-                    tiles2D[x][y] = tile ? tile.index : -1;
+                    tiles2D[y][x] = tile ? tile.index : -1;  // Ensure correct indexing of rows and columns
                 }
             }
 

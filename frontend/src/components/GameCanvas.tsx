@@ -18,7 +18,7 @@ const GameCanvas: React.FC = () => {
 
 
     const palettes = [
-        {label: "Grass", tileset: "assets/grass_tileset.png", tileSize: 32},
+        {label: "Grass", tileset: "assets/tilesets/grass_tileset.png", tileSize: 32},
         {label: "Stone", tileset: "assets/tilesets/stone_ground_tileset.png", tileSize: 32},
         {label: "Walls", tileset: "assets/tilesets/wall_tileset.png", tileSize: 32},
         {label: "Structures", tileset: "assets/tilesets/Struct_tileset.png", tileSize: 32},
