@@ -1,4 +1,9 @@
-export type TowerType = 'fire';
+export enum TowerType {
+    Fire = 'fire',
+    Ice = 'ice',
+    Physical = 'physical',
+    Lightning = 'lightning'
+}
 export type UpgradePath = 'TopPath' | 'MiddlePath' | 'LowerPath';
 export type UpgradeLevel = 0 | 1 | 2;
 

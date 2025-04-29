@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
-import { TowerData, UpgradeStats, TowerType } from '../Utils/TowerData';
+import { TowerData, UpgradeStats} from '../Utils/TowerData';
 import { Enemy } from './Enemy';
 import { Projectile } from './Projectile';
+import { TowerType } from '../../types/Tower';
 
 export class Tower extends Phaser.GameObjects.Sprite {
-    type: TowerType;
+
     path: 'TopPath' | 'MiddlePath' | 'LowerPath';
     level: number;
     stats: UpgradeStats;
@@ -18,7 +19,7 @@ export class Tower extends Phaser.GameObjects.Sprite {
         this.type = type;
         this.path = 'TopPath'; // default path for now
         this.level = 0;
-        this.stats = TowerData[this.type][this.path][this.level];
+        this.stats = TowerData[this.type as keyof typeof TowerData][this.path][this.level];
 
         this.rangeCircle = scene.add.circle(x, y, this.stats.range, 0x00ff00, 0.1);
         scene.add.existing(this);

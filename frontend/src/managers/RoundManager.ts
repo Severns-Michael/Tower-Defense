@@ -1,5 +1,5 @@
-import {GameRound, GameWave} from "../types/GameWaves";
-
+import { GameRound, GameWave } from "../types/GameWaves";
+import EventBus from "../Phaser/Utils/EventBus";
 
 type RoundEvents = {
   onRoundStart?: (round: number) => void;
@@ -12,18 +12,28 @@ export class RoundManager {
   private rounds: GameRound[];
   private currentRoundIndex = 0;
   private currentWaveIndex = 0;
-  private isRunning = false;
   private isRoundActive = false;
+  allWavesSpawned = false;
 
   private events: RoundEvents;
 
   constructor(rounds: GameRound[], events: RoundEvents = {}) {
     this.rounds = rounds;
     this.events = events;
+
+
+
+    // ✅ NEW: Listen when all enemies are cleared
+    EventBus.on('all-enemies-dead', () => {
+      if (this.isRoundActive && this.allWavesSpawned) {
+        console.log('🏁 All enemies dead + all waves sent -> Completing round.');
+        this.completeRound();
+      }
+    });
   }
 
   startNextRound() {
-    if (this.isRoundActive) return; // don't allow starting mid-round
+    if (this.isRoundActive) return;
 
     if (this.currentRoundIndex >= this.rounds.length) {
       this.events.onAllRoundsComplete?.();
@@ -35,6 +45,7 @@ export class RoundManager {
 
     this.currentWaveIndex = 0;
     this.isRoundActive = true;
+    this.allWavesSpawned = false;
 
     this.startNextWave();
   }
@@ -47,32 +58,49 @@ export class RoundManager {
 
     this.spawnWave(wave, () => {
       this.currentWaveIndex++;
+
       if (this.currentWaveIndex >= round.waves.length) {
-        // End of the round
-        this.isRoundActive = false;
-        this.currentRoundIndex++;
+        console.log('✅ All waves spawned for this round.');
+        this.allWavesSpawned = true;
       } else {
-        // Go to next wave in current round
         this.startNextWave();
       }
     });
   }
 
   private spawnWave(wave: GameWave, onComplete: () => void) {
-    let enemyCount = 0;
+    let spawned = 0;
     const totalEnemies = wave.enemies.reduce((sum, e) => sum + e.count, 0);
 
     wave.enemies.forEach(config => {
       for (let i = 0; i < config.count; i++) {
         setTimeout(() => {
           this.events.spawnEnemy?.(config.type);
-          enemyCount++;
+          spawned++;
 
-          if (enemyCount === totalEnemies) {
+          if (spawned === totalEnemies) {
             onComplete();
           }
         }, i * config.spawnDelay);
       }
     });
+  }
+
+  private handleAllEnemiesDead() {
+    if (this.isRoundActive && this.allWavesSpawned) {
+      console.log('🏁 All enemies dead + all waves sent -> Completing round.');
+      this.completeRound();
+    }
+  }
+
+  completeRound() {
+    console.log('🏆 Round completed! Emitting round-completed event.');
+    this.isRoundActive = false;
+    this.currentRoundIndex++;
+    EventBus.emit('round-completed');
+  }
+
+  isRoundActiveNow(): boolean {
+    return this.isRoundActive;
   }
 }

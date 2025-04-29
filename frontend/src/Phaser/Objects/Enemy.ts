@@ -1,23 +1,33 @@
 import Phaser from 'phaser';
+import EventBus from "../Utils/EventBus";
 
 export class Enemy extends Phaser.GameObjects.Sprite {
     health: number;
     speed: number;
     path: Phaser.Math.Vector2[];
     currentWaypointIndex: number = 0;
+    public onReachedEnd: (enemy: Enemy) => void;
+    isDead: boolean = false;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, path: Phaser.Math.Vector2[]) {
+    constructor(
+        scene: Phaser.Scene,
+        x: number,
+        y: number,
+        path: Phaser.Math.Vector2[],
+        onReachedEnd: (enemy: Enemy) => void
+
+    ) {
         super(scene, x, y, 'enemy');  // Assuming 'enemy' is the key for the enemy sprite
 
         this.health = 100;
         this.speed = 3;  // Speed in pixels per second
         this.path = path;
+        this.onReachedEnd = onReachedEnd;
 
         scene.add.existing(this);
-        scene.physics.world.enable(this);  // Enable physics for this enemy
-        this.setOrigin(0.5); // Optional but helps with alignment
+        scene.physics.world.enable(this);
+        this.setOrigin(0.5);
 
-        // Ensure the body is dynamic and set collision world bounds
         if (this.body && this.body instanceof Phaser.Physics.Arcade.Body) {
             const body = this.body as Phaser.Physics.Arcade.Body;
             body.setCollideWorldBounds(true);
@@ -30,6 +40,8 @@ export class Enemy extends Phaser.GameObjects.Sprite {
 
     // Movement logic
     update(time: number, delta: number) {
+        if (this.isDead) return;
+
         const target = this.path[this.currentWaypointIndex];
 
         if (target) {
@@ -38,41 +50,39 @@ export class Enemy extends Phaser.GameObjects.Sprite {
             const distance = Math.sqrt(dx * dx + dy * dy);
 
             if (distance > this.speed) {
-                // Move towards the target
                 const moveX = (dx / distance) * this.speed;
                 const moveY = (dy / distance) * this.speed;
 
                 this.x += moveX;
                 this.y += moveY;
             } else {
-                // Reached target, so we snap to the target
                 this.x = target.x;
                 this.y = target.y;
 
-                // Move to the next waypoint
                 this.currentWaypointIndex++;
 
-                // If we reached the last waypoint
                 if (this.currentWaypointIndex >= this.path.length) {
-                    this.stop();
+                    this.onReachedEnd(this); // Only alive enemies reach end
                 }
             }
         }
-        //enemy postion debug
     }
 
     // Handle damage
     takeDamage(amount: number) {
+        if (this.isDead) return;
+
         this.health -= amount;
         if (this.health <= 0) {
-            console.log('Enemy destroyed');
-            this.destroy();  // Remove from the game
+            this.handleDeath();
         }
     }
 
-    // Logging the movement of the enemy
-    private logMovement() {
-        console.log(`Enemy Position - X: ${this.x.toFixed(2)}, Y: ${this.y.toFixed(2)} | Current waypoint: ${this.currentWaypointIndex}`);
+    handleDeath() {
+        console.log('Enemy destroyed');
+        this.isDead = true;
+        EventBus.emit('enemy-killed', { reward: 5, enemy: this });
+        this.destroy();
     }
 
 }

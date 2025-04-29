@@ -1,11 +1,12 @@
 import React, {useEffect, useState, useRef} from 'react';
 import Phaser from 'phaser';
-import {TowerType} from '../Phaser/Utils/TowerData';
+import {TowerType} from '../types/Tower';
 import GameScene from '../Phaser/scenes/GameScene';
 import {LevelEditorScene} from '../Phaser/scenes/LevelEditorScene';
 import TilePalette from "./TilePalette";
 import TilePaletteGroup from "./TilePaletteGroup";
 import { downloadMapJSON} from "../utils/maputils";
+import EventBus from "../Phaser/Utils/EventBus";
 
 const GameCanvas: React.FC = () => {
     const gameRef = useRef<HTMLDivElement>(null);
@@ -15,6 +16,12 @@ const GameCanvas: React.FC = () => {
     const [selectedTileType, setSelectedTileType] = useState<number>(0); // Default to the first tile
     const [selectedLayer, setSelectedLayer] = useState<number>(0); // Default to Ground layer
     const [placingMode, setPlacingMode] = useState<'tile' | 'spawn' | 'end' | 'tower'>('tile');
+    const [currentRound, setCurrentRound] = useState(1);
+    const maxRounds = 5; // or fetch dynamically if needed
+    const [gameOver, setGameOver] = useState(false);
+    const [playerHealth, setPlayerHealth] = useState(100);
+    const [enemiesRemaining, setEnemiesRemaining] = useState(0);
+    const [playerMoney, setPlayerMoney] = useState(500);
 
 
     const palettes = [
@@ -90,6 +97,66 @@ const GameCanvas: React.FC = () => {
         };
     }, [gameInstance]);
 
+    useEffect(() => {
+        const handleRoundChanged = (data: { round: number }) => {
+            setCurrentRound(data.round);
+        };
+
+        EventBus.on('round-changed', handleRoundChanged);
+
+        return () => {
+            EventBus.off('round-changed', handleRoundChanged);
+        };
+    }, []);
+
+    useEffect(() => {
+        const handleGameOver = () => {
+            setGameOver(true);
+        };
+
+        EventBus.on('game-over', handleGameOver);
+
+        return () => {
+            EventBus.off('game-over', handleGameOver);
+        };
+    }, []);
+
+    useEffect(() => {
+        const handleHealthChanged = (health: number) => {
+            setPlayerHealth(health);
+        };
+
+        EventBus.on('health-changed', handleHealthChanged);
+
+        return () => {
+            EventBus.off('health-changed', handleHealthChanged);
+        };
+    }, []);
+    useEffect(() => {
+        const handleEnemiesChanged = (count: number) => {
+            console.log('Enemies Remaining:', count);
+            setEnemiesRemaining(count);
+        };
+
+        EventBus.on('enemies-changed', handleEnemiesChanged);
+
+        return () => {
+            EventBus.off('enemies-changed', handleEnemiesChanged);
+        };
+    }, []);
+    useEffect(() => {
+        const handleMoneyChanged = (money: number) => {
+            setPlayerMoney(money);
+        };
+
+        EventBus.on('money-changed', handleMoneyChanged);
+
+        return () => {
+            EventBus.off('money-changed', handleMoneyChanged);
+        };
+    }, []);
+
+
     const handleTileSelect = (tileIndex: number, paletteIndex: number) => {
         setSelectedTileType(tileIndex);
         setPlacingMode('tile');
@@ -159,138 +226,171 @@ const GameCanvas: React.FC = () => {
         setPlacingMode('tile'); // Switch back to tile mode
         console.log('Placement complete, switched back to tile mode.');
     };
+    const restartGame = () => {
+        if (!gameInstance) return;
+
+        setGameOver(false);     // Hide Game Over screen
+        setCurrentRound(1);     // Reset rounds to 1
+        setPlayerHealth(100);   // Reset health to 100
+
+        const scene = gameInstance.scene.getScene('GameScene');
+        scene.scene.restart();  // Restart Phaser scene
+    };
 
     return (
-        <div style={{display: 'flex'}}>
-            <div ref={gameRef} id="phaser-container"/>
+        <>
+            <div style={{
+                position: 'absolute',
+                top: 200,
+                right: 20,
+                zIndex: 30,
+                backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                padding: '10px',
+                borderRadius: '8px',
+            }}>
+                <h2>Money: ${playerMoney}</h2>
+            </div>
+            <div style={{
+                position: 'absolute',
+                top: 140,
+                right: 20,
+                zIndex: 30,
+                backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                padding: '10px',
+                borderRadius: '8px',
+            }}>
+                <h2>Enemies Left: {enemiesRemaining}</h2>
+            </div>
+            <div style={{
+                position: 'absolute',
+                top: 80,
+                right: 20,
+                zIndex: 30,
+                backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                padding: '10px',
+                borderRadius: '8px',
+            }}>
+                <h2>Health: {playerHealth}</h2>
+            </div>
+            {/* Round Tracker */}
+            <div style={{
+                position: 'absolute',
+                top: 20,
+                right: 20,
+                zIndex: 30,
+                backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                padding: '10px',
+                borderRadius: '8px',
+            }}>
+                <h2>Round {currentRound} / {maxRounds}</h2>
+            </div>
 
-            {/* Editor UI Panel */}
-            {editorMode && (
-                <div
-                    style={{
-                        marginLeft: '10px',
-                        height: '750px',
-                        position: 'relative',
-                        zIndex: 10,
-                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                        padding: '10px',
-                        overflowY: 'auto',
-                    }}
-                >
-                    <h4>Layer Selector</h4>
-                    {layers.map((layer, index) => (
-                        <button
-                            key={index}
-                            style={{
-                                margin: '2px',
-                                backgroundColor: selectedLayer === index ? '#ddd' : '#fff',
-                            }}
-                            onClick={() => handleLayerSelect(index)}
-                        >
-                            {layer.label}
-                        </button>
-                    ))}
-                    {!editorMode && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                top: '80px',
-                                right: '20px', // <-- RIGHT SIDE
-                                zIndex: 20,
-                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                padding: '10px',
-                                borderRadius: '8px'
-                            }}
-                        >
-                            <h4>Select Tower</h4>
+            {/* Main Game and UI */}
+            <div style={{display: 'flex'}}>
+                <div ref={gameRef} id="phaser-container"/>
+
+                {/* Editor UI Panel */}
+                {editorMode && (
+                    <div
+                        style={{
+                            marginLeft: '10px',
+                            height: '750px',
+                            position: 'relative',
+                            zIndex: 10,
+                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                            padding: '10px',
+                            overflowY: 'auto',
+                        }}
+                    >
+                        <h4>Layer Selector</h4>
+                        {layers.map((layer, index) => (
                             <button
-                                style={{ marginBottom: '5px' }}
-                                onClick={() => handleTowerSelect(TowerType.Fire)}
+                                key={index}
+                                style={{
+                                    margin: '2px',
+                                    backgroundColor: selectedLayer === index ? '#ddd' : '#fff',
+                                }}
+                                onClick={() => handleLayerSelect(index)}
                             >
-                                Fire Tower
+                                {layer.label}
                             </button>
-                            {/* Add more tower buttons here if you want later */}
-                        </div>
-                    )}
+                        ))}
 
-                    <h4>Tile Palette</h4>
-                    <TilePaletteGroup
-                        palettes={palettes.filter((_, i) =>
-                            layerToPaletteMap[selectedLayer]?.includes(i)
-                        )}
-                        onTileSelect={handleTileSelect}
-                    />
+                        <h4>Tile Palette</h4>
+                        <TilePaletteGroup
+                            palettes={palettes.filter((_, i) =>
+                                layerToPaletteMap[selectedLayer]?.includes(i)
+                            )}
+                            onTileSelect={handleTileSelect}
+                        />
 
-                    <h4>Special Points</h4>
-                    <button
-                        onClick={() => {
-                            setPlacingMode('spawn');
-                            gameInstance?.scene.getScene('LevelEditorScene').events.emit('start-placing-spawn');
-                            gameInstance?.scene.getScene('LevelEditorScene').events.once('spawn-placed', handlePlacementComplete);
+                        <h4>Special Points</h4>
+                        <button
+                            onClick={() => {
+                                setPlacingMode('spawn');
+                                gameInstance?.scene.getScene('LevelEditorScene').events.emit('start-placing-spawn');
+                                gameInstance?.scene.getScene('LevelEditorScene').events.once('spawn-placed', handlePlacementComplete);
+                            }}
+                        >
+                            Place Spawn
+                        </button>
+                        <button
+                            onClick={() => {
+                                setPlacingMode('end');
+                                gameInstance?.scene.getScene('LevelEditorScene').events.emit('start-placing-end');
+                                gameInstance?.scene.getScene('LevelEditorScene').events.once('end-placed', handlePlacementComplete);
+                            }}
+                        >
+                            Place End
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (!gameInstance) return;
+                                const levelEditorScene = gameInstance.scene.getScene('LevelEditorScene') as LevelEditorScene;
+                                const tilemap = levelEditorScene.getTileData();
+                                downloadMapJSON(tilemap.layers, tilemap.mapWidth, tilemap.mapHeight, tilemap.spawnPoints, tilemap.endPoints);
+                            }}
+                        >
+                            Download Map
+                        </button>
+                    </div>
+                )}
+
+                {/* Tower Selection and Round Control - show only when NOT in editorMode */}
+                {!editorMode && (
+                    <div
+                        style={{
+                            marginLeft: '10px',
+                            height: '750px',
+                            position: 'relative',
+                            zIndex: 10,
+                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                            padding: '10px',
+                            overflowY: 'auto',
                         }}
                     >
-                        Place Spawn
-                    </button>
-                    <button
-                        onClick={() => {
-                            setPlacingMode('end');
-                            gameInstance?.scene.getScene('LevelEditorScene').events.emit('start-placing-end');
-                            gameInstance?.scene.getScene('LevelEditorScene').events.once('end-placed', handlePlacementComplete);
-                        }}
-                    >
-                        Place End
-                    </button>
-                    <button
-                        onClick={() => {
-                            if (!gameInstance) return;
+                        <h4>Select Tower</h4>
+                        <button
+                            style={{marginBottom: '5px'}}
+                            onClick={() => handleTowerSelect(TowerType.Fire)}
+                        >
+                            Fire Tower
+                        </button>
+                        {/* Add more towers later */}
 
-                            const levelEditorScene = gameInstance.scene.getScene('LevelEditorScene') as LevelEditorScene;
-                            const tilemap = levelEditorScene.getTileData(); // Get tile data from the scene
-
-                            // Pass the correct properties from tilemap
-                            downloadMapJSON(tilemap.layers, tilemap.mapWidth, tilemap.mapHeight, tilemap.spawnPoints, tilemap.endPoints);
-                        }}
-                    >
-                        Download Map
-                    </button>
-
-                </div>
-            )}
-            {/* Tower Selection - show only when NOT in editorMode */}
-            {!editorMode && (
-                <div
-                    style={{
-                        marginLeft: '10px',
-                        height: '750px',
-                        position: 'relative',
-                        zIndex: 10,
-                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                        padding: '10px',
-                        overflowY: 'auto',
-                    }}
-                >
-                    <h4>Select Tower</h4>
-                    <button
-                        style={{marginBottom: '5px'}}
-                        onClick={() => handleTowerSelect(TowerType.Fire)}
-                    >
-                        Fire Tower
-                    </button>
-                    {/* Add more towers later */}
-
-                    <h4>Round Control</h4>
-                    <button
-                        onClick={() => {
-                            if (!gameInstance) return;
-                            const scene = gameInstance.scene.getScene('GameScene') as GameScene;
-                            scene.roundManager?.startNextRound();
-                        }}
-                    >
-                        Start Next Round
-                    </button>
-                </div>
-
-            )}
+                        <h4>Round Control</h4>
+                        <button
+                            onClick={() => {
+                                if (!gameInstance) return;
+                                const scene = gameInstance.scene.getScene('GameScene') as GameScene;
+                                scene.roundManager?.startNextRound();
+                            }}
+                        >
+                            Start Next Round
+                        </button>
+                    </div>
+                )}
+            </div>
 
             {/* Editor Toggle */}
             <div style={{position: 'absolute', top: '20px', left: '20px', zIndex: 20}}>
@@ -298,7 +398,40 @@ const GameCanvas: React.FC = () => {
                     {editorMode ? 'Play Game' : 'Open Level Editor'}
                 </button>
             </div>
-        </div>
+            {gameOver && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    color: 'white',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 100,
+                }}>
+                    <h1>Game Over</h1>
+                    <button
+                        style={{
+                            marginTop: '20px',
+                            padding: '10px 20px',
+                            fontSize: '20px',
+                            borderRadius: '8px',
+                            backgroundColor: '#ff4d4d',
+                            color: 'white',
+                            border: 'none',
+                            cursor: 'pointer'
+                        }}
+                        onClick={restartGame}
+                    >
+                        Restart Game
+                    </button>
+                </div>
+            )}
+        </>
     );
 }
 
