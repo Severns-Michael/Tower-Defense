@@ -7,10 +7,11 @@ import TilePalette from "./TilePalette";
 import TilePaletteGroup from "./TilePaletteGroup";
 import { downloadMapJSON} from "../utils/maputils";
 import EventBus from "../Phaser/Utils/EventBus";
+import TowerSelector from './TowerUi';
 
 const GameCanvas: React.FC = () => {
     const gameRef = useRef<HTMLDivElement>(null);
-    const [selectedTower, setSelectedTower] = useState<TowerType>(TowerType.Fire);
+    const [selectedTower, setSelectedTower] = useState<TowerType | null>(null);
     const [gameInstance, setGameInstance] = useState<Phaser.Game | null>(null);
     const [editorMode, setEditorMode] = useState(false);
     const [selectedTileType, setSelectedTileType] = useState<number>(0); // Default to the first tile
@@ -67,7 +68,6 @@ const GameCanvas: React.FC = () => {
             scene.events.on('tower-selected', (towerType: TowerType) => {
                 setSelectedTower(towerType);
             });
-
             // Start with the GameScene
             game.scene.start('GameScene');
         });
@@ -370,12 +370,7 @@ const GameCanvas: React.FC = () => {
                         }}
                     >
                         <h4>Select Tower</h4>
-                        <button
-                            style={{marginBottom: '5px'}}
-                            onClick={() => handleTowerSelect(TowerType.Fire)}
-                        >
-                            Fire Tower
-                        </button>
+                        <TowerSelector onTowerSelect={handleTowerSelect}/>
                         {/* Add more towers later */}
 
                         <h4>Round Control</h4>

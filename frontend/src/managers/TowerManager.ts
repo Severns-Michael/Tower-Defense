@@ -4,6 +4,7 @@ import { TowerType } from "../types/Tower";
 import { PlayerManager } from "./PlayerManager";
 import Phaser from "phaser";
 
+
 export class TowerManager {
     scene: Phaser.Scene;
     towers: Tower[] = [];
@@ -65,13 +66,13 @@ export class TowerManager {
         return true;
     }
 
-    placeTower(tileX: number, tileY: number, towerType: TowerType) {
+    placeTower(tileX: number, tileY: number, selectedTower: TowerType) {
         if (!this.canPlaceTowerHere(tileX, tileY)) {
             console.log("Can't place tower here!");
             return;
         }
 
-        const towerCost = 100; //  Hardcoded cost for now
+        const towerCost = 100; // Hardcoded
 
         if (this.playerManager.spendMoney(towerCost)) {
             const size = this.tileSize * this.tileScale;
@@ -79,7 +80,7 @@ export class TowerManager {
                 this.scene,
                 tileX * size + size / 2,
                 tileY * size + size / 2,
-                towerType
+                selectedTower // only the type ('fire')
             );
 
             this.towers.push(tower);

@@ -1,20 +1,29 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
+import {chainLightning, freezeEnemy, spawnFirePatch, knockbackEnemy, fireDmgOverTime} from '../Utils/SpecialEffects';
 
-export class Projectile extends Phaser.Physics.Arcade.Sprite {
+    export class Projectile extends Phaser.Physics.Arcade.Sprite {
     speed: number = 300;
-    damage: number = 20;
+    damage: number;
     target: Enemy;
+    specialAbility: string;
+    enemies: Enemy[];
 
-    constructor(scene: Phaser.Scene, x: number, y: number, target: Enemy) {
-        super(scene, x, y, 'projectile');  // 'projectile' should be a loaded asset key
+
+    constructor(scene: Phaser.Scene, x: number, y: number, target: Enemy, damage: number = 20, specialAbility: string = '', enemies: Enemy[]) {
+        super(scene, x, y, 'projectile');
         this.target = target;
+        this.damage = damage;
+        this.specialAbility = specialAbility;
+        this.enemies = enemies;
+
+
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
         this.setActive(true);
         this.setVisible(true);
-        this.setOrigin(0.5); // Centered origin looks better
+        this.setOrigin(0.5);
 
         scene.physics.moveToObject(this, target, this.speed);
     }
@@ -33,11 +42,43 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
 
         this.setVelocity(velocityX, velocityY);
 
-        // Check collision distance
         const dist = Phaser.Math.Distance.Between(this.x, this.y, this.target.x, this.target.y);
         if (dist < 10) {
-            this.target.takeDamage(this.damage);
+            this.applyEffect();
             this.destroy();
+        }
+    }
+    applyEffect() {
+        switch (this.specialAbility) {
+            case 'Chain Lightning':
+                chainLightning(
+                    this.scene,
+                    this.target,
+                    this.enemies,
+                    this.damage,
+                    1000, //chain range
+                    3 // chains
+                );
+                break;
+            case 'Freeze':
+                console.log('🧊 FREEZE APPLY EFFECT - Dealing damage first');
+                this.target.takeDamage(this.damage);
+                freezeEnemy(this.target, 3);
+                break;
+            case 'Fire Patch':
+                this.target.takeDamage(this.damage);
+                spawnFirePatch(this.scene, this.target.x, this.target.y);
+                break;
+            case 'Knockback':
+                this.target.takeDamage(this.damage);
+                knockbackEnemy(this.target, this.x, this.y);
+                break;
+            case 'Fireball':
+                this.target.takeDamage(this.damage);
+                fireDmgOverTime(this.scene, this.target, this.damage * 0.3, 3 )
+                break;
+            default:
+                this.target.takeDamage(this.damage);
         }
     }
 }

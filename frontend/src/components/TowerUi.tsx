@@ -1,10 +1,6 @@
-// Define the Tower type
-import {useState} from "react";
-
-export interface TowerType {
-    name: string;
-    type: string; // You can make this more specific, like 'fire' | 'ice' | etc., if you want.
-}
+import React, { useState } from 'react';
+import { BaseTowers } from '../Phaser/Utils/BaseTower';
+import { TowerType } from '../types/Tower';
 
 interface TowerSelectorProps {
     onTowerSelect: (tower: TowerType) => void;
@@ -13,34 +9,31 @@ interface TowerSelectorProps {
 const TowerSelector: React.FC<TowerSelectorProps> = ({ onTowerSelect }) => {
     const [selectedTower, setSelectedTower] = useState<TowerType | null>(null);
 
-    const towerTypes: TowerType[] = [
-        { name: 'Fire', type: 'fire' },
-    ];
+    const towerList = Object.keys(BaseTowers) as TowerType[];
 
-    const handleTowerClick = (tower: TowerType) => {
-        setSelectedTower(tower);
-        onTowerSelect(tower);  // This should ensure the tower is selected properly
-
-        // Dispatch event to Phaser
-        window.dispatchEvent(new CustomEvent<TowerType>('tower-selected', {
-            detail: tower
-        }));
+    const handleTowerClick = (towerType: TowerType) => {
+        setSelectedTower(towerType);
+        onTowerSelect(towerType);
+        window.dispatchEvent(new CustomEvent<TowerType>('tower-selected', { detail: towerType }));
     };
 
     return (
         <div className="tower-selector">
             <h3>Select a Tower</h3>
             <div className="tower-buttons">
-                {towerTypes.map((tower) => (
+                {towerList.map((towerType) => (
                     <button
-                        key={tower.type}
-                        onClick={() => handleTowerClick(tower)}
-                        className={selectedTower === tower ? 'selected' : ''}
+                        key={towerType}
+                        onClick={() => handleTowerClick(towerType)}
+                        className={selectedTower === towerType ? 'selected' : ''}
+                        title={BaseTowers[towerType].description}
                     >
-                        {tower.name}
+                        {BaseTowers[towerType].name}
                     </button>
                 ))}
             </div>
         </div>
     );
 };
+
+export default TowerSelector;

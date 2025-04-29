@@ -94,7 +94,7 @@ export class RoundManager {
   }
 
   completeRound() {
-    console.log('🏆 Round completed! Emitting round-completed event.');
+    console.log(' Round completed! Emitting round-completed event.');
     this.isRoundActive = false;
     this.currentRoundIndex++;
     EventBus.emit('round-completed');
