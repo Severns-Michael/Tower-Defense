@@ -7,6 +7,12 @@ export enum TowerType {
 export type UpgradePath = 'TopPath' | 'MiddlePath' | 'LowerPath';
 export type UpgradeLevel = 0 | 1 | 2;
 
+export type TowerInfoType = {
+    type: TowerType;
+    path: UpgradePath;
+    level: number;
+};
+
 export interface TowerStats {
     damage: number;
     range: number;

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TowerType } from '../../types/Tower';
+import {TowerType, UpgradePath} from '../../types/Tower';
 import { RoundManager } from "../../managers/RoundManager";
 import { PlayerManager } from "../../managers/PlayerManager";
 import { EnemyManager } from "../../managers/EnemyManager";
@@ -9,6 +9,8 @@ import EventBus from "../Utils/EventBus";
 import { extractPathFromLayer, drawPath } from '../Utils/PathUtils';
 import { populateLayer } from '../Utils/TilemapUtils';
 import {Enemy} from "../Objects/Enemy";
+import {Tower} from "../Objects/Tower";
+import { TowerData } from '../Utils/TowerData';
 
 type LayerName = 'Ground' | 'Path' | 'Obstacles' | 'Props';
 
@@ -32,6 +34,7 @@ export default class MainScene extends Phaser.Scene {
     obstaclesLayer!: Phaser.Tilemaps.TilemapLayer;
     propsLayer!: Phaser.Tilemaps.TilemapLayer;
     private tilemap: Phaser.Tilemaps.Tilemap | null = null;
+    selectedTowerRef: Tower | null = null;
 
     constructor() {
         super('GameScene');
@@ -144,6 +147,28 @@ export default class MainScene extends Phaser.Scene {
 
         EventBus.emit('round-changed', { round: this.currentRound });
 
+        this.events.on('tower-selected-for-upgrade', (towerInfo: { type: TowerType; path: string; level: number; }) => {
+            this.selectedTowerRef = this.towerManager.towers.find((t: Tower) =>
+                t.type === towerInfo.type &&
+                t.path === towerInfo.path &&
+                t.level === towerInfo.level
+            ) || null;
+
+            // ✅ Do NOT re-emit here!
+        });
+        this.events.on('upgrade-tower-path', (path: UpgradePath) => {
+            if (this.selectedTowerRef) {
+                this.selectedTowerRef.upgradePath(path);
+                // Optionally emit again to refresh UI
+                this.events.emit('tower-selected-for-upgrade', {
+                    type: this.selectedTowerRef.type,
+                    path: this.selectedTowerRef.path,
+                    level: this.selectedTowerRef.level,
+                });
+            } else {
+                console.warn('No tower selected to upgrade.');
+            }
+        });
 
         this.setupInputHandlers();
     }
@@ -176,6 +201,7 @@ export default class MainScene extends Phaser.Scene {
             if (this.selectedTowerType && this.towerManager.canPlaceTowerHere(tileX, tileY)) {
                 this.towerManager.placeTower(tileX, tileY, this.selectedTowerType);
             }
+
         });
 
         this.events.on('tower-selected', (towerType: TowerType) => {
@@ -183,10 +209,12 @@ export default class MainScene extends Phaser.Scene {
             console.log('Tower selected:', towerType);
         });
 
+
         this.input.on('wheel', (pointer: Phaser.Input.Pointer) => {
             const scaleChange = pointer.deltaY > 0 ? 0.1 : -0.1;
             this.cameras.main.zoom = Phaser.Math.Clamp(this.cameras.main.zoom + scaleChange, 0.5, 2);
         });
+
     }
 }
 

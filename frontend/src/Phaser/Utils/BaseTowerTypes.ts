@@ -1,4 +1,4 @@
-export type AttackStrategyType = 'Projectile' | 'ChainLightning' | 'SlowShot' | 'HeavyShot';
+export type AttackStrategyType = 'BasicProjectile'|'Projectile' | 'ChainLightning' | 'SlowShot' | 'HeavyShot';
 
 export interface BaseTowerStats {
     name: string;

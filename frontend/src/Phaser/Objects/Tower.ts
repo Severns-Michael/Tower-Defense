@@ -11,6 +11,7 @@ import { BaseTowerStats, AttackStrategyType } from '../Utils/BaseTowerTypes';
 import { SlowShotAttack } from '../Utils/AttackStrategy/SlowShotAttack';
 import { HeavyShotAttack } from '../Utils/AttackStrategy/HeavyShotAttack';
 
+
 export class Tower extends Phaser.GameObjects.Sprite {
 
     path: 'TopPath' | 'MiddlePath' | 'LowerPath';
@@ -37,7 +38,20 @@ export class Tower extends Phaser.GameObjects.Sprite {
             range: baseStats.range,
             rateOfFire: baseStats.rateOfFire,
             specialAbility: baseStats.specialAbility,
+            baseAttackStrategy: baseStats.baseAttackStrategy
         };
+        this.setInteractive({ useHandCursor: true });
+
+        this.on('pointerdown', () => {
+            this.scene.events.emit('tower-selected-for-upgrade', {
+                type: this.type,
+                path: this.path,
+                level: this.level,
+            });
+
+            // Store reference for upgrade command
+            (this.scene as any).selectedTowerRef = this; // We'll use this later
+        });
 
         this.specialAbility = baseStats.specialAbility;
         this.fireStrategy = this.getFireStrategy(baseStats.baseAttackStrategy);
@@ -45,7 +59,9 @@ export class Tower extends Phaser.GameObjects.Sprite {
         this.rangeCircle = scene.add.circle(x, y, this.stats.range, 0x00ff00, 0.1);
 
         scene.add.existing(this);
+
     }
+
 
     getFireStrategy(baseAttackStrategy: AttackStrategyType): AttackStrategy {
         switch (baseAttackStrategy) {
@@ -88,5 +104,14 @@ export class Tower extends Phaser.GameObjects.Sprite {
             )[0];
 
         return closest || null;
+    }
+    upgradePath(path: 'TopPath' | 'MiddlePath' | 'LowerPath') {
+        if (this.level >= 2) return;
+
+        this.path = path;
+        this.level += 1;
+        this.stats = TowerData[this.type][path][this.level];
+        this.fireStrategy = this.getFireStrategy(this.stats.baseAttackStrategy as AttackStrategyType);
+        console.log(`🔼 Upgraded ${this.type} tower to level ${this.level} on ${path}`);
     }
 }

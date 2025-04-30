@@ -1,6 +1,6 @@
 import React, {useEffect, useState, useRef} from 'react';
 import Phaser from 'phaser';
-import {TowerType} from '../types/Tower';
+import {TowerInfoType, TowerType} from '../types/Tower';
 import GameScene from '../Phaser/scenes/GameScene';
 import {LevelEditorScene} from '../Phaser/scenes/LevelEditorScene';
 import TilePalette from "./TilePalette";
@@ -8,6 +8,7 @@ import TilePaletteGroup from "./TilePaletteGroup";
 import { downloadMapJSON} from "../utils/maputils";
 import EventBus from "../Phaser/Utils/EventBus";
 import TowerSelector from './TowerUi';
+import UpgradePanel from "./UpgradePanel";
 
 const GameCanvas: React.FC = () => {
     const gameRef = useRef<HTMLDivElement>(null);
@@ -23,6 +24,10 @@ const GameCanvas: React.FC = () => {
     const [playerHealth, setPlayerHealth] = useState(100);
     const [enemiesRemaining, setEnemiesRemaining] = useState(0);
     const [playerMoney, setPlayerMoney] = useState(500);
+    const [selectedTowerForUpgrade, setSelectedTowerForUpgrade] = useState<{ type: TowerType;
+        path: 'TopPath' | 'MiddlePath' | 'LowerPath';
+        level: number;
+    } | null>(null);
 
 
     const palettes = [
@@ -155,6 +160,20 @@ const GameCanvas: React.FC = () => {
             EventBus.off('money-changed', handleMoneyChanged);
         };
     }, []);
+    useEffect(() => {
+        if (!gameInstance) return;
+
+        const scene = gameInstance.scene.getScene('GameScene') as GameScene;
+        const upgradeListener = (towerInfo: TowerInfoType) => {
+            setSelectedTowerForUpgrade(towerInfo);
+        };
+
+        scene.events.on('tower-selected-for-upgrade', upgradeListener);
+
+        return () => {
+            scene.events.off('tower-selected-for-upgrade', upgradeListener);
+        };
+    }, [gameInstance]);
 
 
     const handleTileSelect = (tileIndex: number, paletteIndex: number) => {
@@ -356,7 +375,6 @@ const GameCanvas: React.FC = () => {
                     </div>
                 )}
 
-                {/* Tower Selection and Round Control - show only when NOT in editorMode */}
                 {!editorMode && (
                     <div
                         style={{
@@ -369,20 +387,34 @@ const GameCanvas: React.FC = () => {
                             overflowY: 'auto',
                         }}
                     >
-                        <h4>Select Tower</h4>
-                        <TowerSelector onTowerSelect={handleTowerSelect}/>
-                        {/* Add more towers later */}
-
-                        <h4>Round Control</h4>
-                        <button
-                            onClick={() => {
-                                if (!gameInstance) return;
-                                const scene = gameInstance.scene.getScene('GameScene') as GameScene;
-                                scene.roundManager?.startNextRound();
-                            }}
-                        >
-                            Start Next Round
-                        </button>
+                        {selectedTowerForUpgrade ? (
+                            <>
+                                <h4>Upgrade Tower</h4>
+                                <UpgradePanel
+                                    tower={selectedTowerForUpgrade}
+                                    onUpgradePathClick={(path) => {
+                                        const scene = gameInstance?.scene.getScene('GameScene') as GameScene;
+                                        scene?.events.emit('upgrade-tower-path', path);
+                                    }}
+                                />
+                                <button onClick={() => setSelectedTowerForUpgrade(null)}>Back to Tower Select</button>
+                            </>
+                        ) : (
+                            <>
+                                <h4>Select Tower</h4>
+                                <TowerSelector onTowerSelect={handleTowerSelect} />
+                                <h4>Round Control</h4>
+                                <button
+                                    onClick={() => {
+                                        if (!gameInstance) return;
+                                        const scene = gameInstance.scene.getScene('GameScene') as GameScene;
+                                        scene.roundManager?.startNextRound();
+                                    }}
+                                >
+                                    Start Next Round
+                                </button>
+                            </>
+                        )}
                     </div>
                 )}
             </div>

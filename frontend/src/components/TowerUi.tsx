@@ -6,6 +6,7 @@ interface TowerSelectorProps {
     onTowerSelect: (tower: TowerType) => void;
 }
 
+
 const TowerSelector: React.FC<TowerSelectorProps> = ({ onTowerSelect }) => {
     const [selectedTower, setSelectedTower] = useState<TowerType | null>(null);
 
@@ -32,8 +33,8 @@ const TowerSelector: React.FC<TowerSelectorProps> = ({ onTowerSelect }) => {
                     </button>
                 ))}
             </div>
+
         </div>
     );
 };
-
 export default TowerSelector;
