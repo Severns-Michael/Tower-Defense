@@ -64,6 +64,7 @@ const TilePalette: React.FC<{
                             border: '1px solid #ccc',
                             boxSizing: 'border-box',
                             cursor: 'pointer',
+
                         }}
                     />
                 );

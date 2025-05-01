@@ -167,7 +167,7 @@ export class LevelEditorScene extends Phaser.Scene {
                     return;
                 }
 
-                // 🛠️ ACTUALLY PLACE THE TILE HERE
+
                 this.placeTile(tileX, tileY);
             }
         }

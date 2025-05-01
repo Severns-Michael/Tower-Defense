@@ -27,7 +27,7 @@ export class Enemy extends Phaser.GameObjects.Sprite {
 
 
     ) {
-        super(scene, x, y, 'enemy');  // Assuming 'enemy' is the key for the enemy sprite
+        super(scene, x, y, 'enemy');
 
         this.health = 50;
         this.speed = 3;  // Speed in pixels per second
@@ -94,7 +94,7 @@ export class Enemy extends Phaser.GameObjects.Sprite {
             }
         }
 
-        // ✅ ALWAYS update health bar position and size even when frozen!
+
         const healthRatio = Phaser.Math.Clamp(this.health / 50, 0, 1);
 
         this.healthBar.setPosition(this.x - 16, this.y - 32);
@@ -105,8 +105,11 @@ export class Enemy extends Phaser.GameObjects.Sprite {
 
     // Handle damage
     takeDamage(amount: number) {
-        if (this.isDead) return;
-        this.health -= amount;
+        const multiplier = (this as any).damageMultiplier || 1;
+        const finalDamage = amount * multiplier;
+
+        this.health -= finalDamage;
+
         if (this.health <= 0) {
             this.handleDeath();
         }
@@ -122,14 +125,14 @@ export class Enemy extends Phaser.GameObjects.Sprite {
     }
 
     freeze(freezeDurationSeconds: number) {
-        if (this.isFrozen) return;  // already frozen, skip
+        if (this.isFrozen) return;
 
         console.log('❄️ Freezing enemy at:', this.x, this.y);
 
         this.isFrozen = true;
 
         const originalSpeed = this.speed;
-        this.speed = 0; // stop enemy
+        this.speed = 0;
 
         this.freezeTimer = this.scene.time.addEvent({
             delay: freezeDurationSeconds * 1000,

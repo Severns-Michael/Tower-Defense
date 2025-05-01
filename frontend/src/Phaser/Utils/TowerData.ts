@@ -1,103 +1,103 @@
+// src/Phaser/Utils/TowerData.ts
 import { TowerType } from '../../types/Tower';
-import {AttackStrategyType} from "./BaseTowerTypes";
+import { AttackStrategyType } from "./BaseTowerTypes";
 
-
-// Define the properties for each upgrade stage (LightBlue, DarkBlue, MidnightBlue, etc.)
-interface UpgradeStats {
-    damage: number;
-    range: number;
-    rateOfFire: number;
-    specialAbility: string; // Example: Freeze, Fireball, Shock, etc.
-    baseAttackStrategy: AttackStrategyType;
+interface UpgradeModifiers {
+    damage?: number;
+    range?: number;
+    rateOfFire?: number;
+    specialAbility?: string;
+    baseAttackStrategy?: AttackStrategyType;
 }
 
-// Each upgrade path can have 3 stages
 interface UpgradePath {
-    [level: number]: UpgradeStats;
+    [level: number]: UpgradeModifiers;
 }
 
-// The full set of upgrades for each tower (fire, ice, etc.)
 interface TowerUpgrades {
     TopPath: UpgradePath;
     MiddlePath: UpgradePath;
     LowerPath: UpgradePath;
 }
 
-export type {
-    UpgradeStats,
-    UpgradePath,
-    TowerUpgrades,
-};
 export type TowerDataType = Record<TowerType, TowerUpgrades>;
 
 export const TowerData: TowerDataType = {
     fire: {
         TopPath: {
-            0: { damage: 10, range: 100, rateOfFire: 1000, specialAbility: 'Fireball',baseAttackStrategy: 'BasicProjectile' },
-            1: { damage: 20, range: 120, rateOfFire: 900, specialAbility: 'Flame Burst',baseAttackStrategy: 'BasicProjectile' },
-            2: { damage: 40, range: 150, rateOfFire: 800, specialAbility: 'Inferno', baseAttackStrategy: 'BasicProjectile' },
+            0: { damage: 5, range: 20, rateOfFire: -100, specialAbility: 'Fireball' },
+            1: { damage: 10, range: 30, rateOfFire: -150, specialAbility: 'Fireball' },
+            2: { damage: 20, range: 50, rateOfFire: -200, specialAbility: 'Inferno' },
         },
         MiddlePath: {
-            0: { damage: 5, range: 110, rateOfFire: 1200, specialAbility: 'Freeze' , baseAttackStrategy: 'BasicProjectile'},
-            1: { damage: 10, range: 130, rateOfFire: 1100, specialAbility: 'Ice Nova' , baseAttackStrategy: 'BasicProjectile'},
-            2: { damage: 15, range: 140, rateOfFire: 1000, specialAbility: 'Blizzard', baseAttackStrategy: 'BasicProjectile' },
+            0: { damage: 3, range: 10, rateOfFire: -50, specialAbility: 'Fireball' },
+            1: { damage: 5, range: 20, rateOfFire: -100, specialAbility: 'Fireball' },
+            2: { damage: 8, range: 30, rateOfFire: -150, specialAbility: 'Fire Patch' },
         },
         LowerPath: {
-            0: { damage: 8, range: 90, rateOfFire: 1000, specialAbility: 'Poison Cloud', baseAttackStrategy: 'BasicProjectile' },
-            1: { damage: 12, range: 100, rateOfFire: 950, specialAbility: 'Acid Rain' , baseAttackStrategy: 'BasicProjectile'},
-            2: { damage: 18, range: 110, rateOfFire: 900, specialAbility: 'Toxic Wave' , baseAttackStrategy: 'BasicProjectile'},
+            0: { damage: 4, range: 10, rateOfFire: -50, specialAbility: 'Fireball' },
+            1: { damage: 6, range: 20, rateOfFire: -100, specialAbility: 'Fireball' },
+            2: { damage: 10, range: 30, rateOfFire: -150, specialAbility: 'Knockback' },
         },
     },
+
     ice: {
         TopPath: {
-            0: { damage: 10, range: 100, rateOfFire: 1000, specialAbility: 'Fireball', baseAttackStrategy: 'BasicProjectile' },
-            1: { damage: 20, range: 120, rateOfFire: 900, specialAbility: 'Flame Burst' , baseAttackStrategy: 'BasicProjectile'},
-            2: { damage: 40, range: 150, rateOfFire: 800, specialAbility: 'Inferno', baseAttackStrategy: 'BasicProjectile' },
+            0: { damage: 3, range: 15, rateOfFire: -50, specialAbility: 'SlowShot' },
+            1: { damage: 5, range: 25, rateOfFire: -100, specialAbility: 'SlowShot' },
+            2: { damage: 8, range: 40, rateOfFire: -150, specialAbility: 'Blizzard' },
         },
         MiddlePath: {
-            0: { damage: 5, range: 110, rateOfFire: 1200, specialAbility: 'Freeze' , baseAttackStrategy: 'BasicProjectile'},
-            1: { damage: 10, range: 130, rateOfFire: 1100, specialAbility: 'Ice Nova' , baseAttackStrategy: 'BasicProjectile'},
-            2: { damage: 15, range: 140, rateOfFire: 1000, specialAbility: 'Blizzard' , baseAttackStrategy: 'BasicProjectile'},
+            0: { damage: 2, range: 10, rateOfFire: -50, specialAbility: 'SlowShot' },
+            1: { damage: 3, range: 15, rateOfFire: -100, specialAbility: 'SlowShot' },
+            2: { damage: 5, range: 25, rateOfFire: -150, specialAbility: 'SlowShotv2' },
         },
         LowerPath: {
-            0: { damage: 8, range: 90, rateOfFire: 1000, specialAbility: 'Poison Cloud', baseAttackStrategy: 'BasicProjectile' },
-            1: { damage: 12, range: 100, rateOfFire: 950, specialAbility: 'Acid Rain', baseAttackStrategy: 'BasicProjectile' },
-            2: { damage: 18, range: 110, rateOfFire: 900, specialAbility: 'Toxic Wave' , baseAttackStrategy: 'BasicProjectile'},
+            0: { damage: 4, range: 10, rateOfFire: -50, specialAbility: 'SlowShot' },
+            1: { damage: 6, range: 20, rateOfFire: -100, specialAbility: 'SlowShot' },
+            2: { damage: 9, range: 30, rateOfFire: -150, specialAbility: 'Freeze' },
         },
     },
+
     physical: {
         TopPath: {
-            0: { damage: 10, range: 100, rateOfFire: 1000, specialAbility: 'Fireball', baseAttackStrategy: 'BasicProjectile' },
-            1: { damage: 20, range: 120, rateOfFire: 900, specialAbility: 'Flame Burst', baseAttackStrategy: 'BasicProjectile' },
-            2: { damage: 40, range: 150, rateOfFire: 800, specialAbility: 'Inferno' , baseAttackStrategy: 'BasicProjectile'},
+            0: { damage: 7, range: 10, rateOfFire: -50, specialAbility: 'HeavyShot' },
+            1: { damage: 12, range: 20, rateOfFire: -100, specialAbility: 'HeavyShot' },
+            2: { damage: 20, range: 30, rateOfFire: -150, specialAbility: 'HeavyShot' },
         },
         MiddlePath: {
-            0: { damage: 5, range: 110, rateOfFire: 1200, specialAbility: 'Freeze' , baseAttackStrategy: 'BasicProjectile'},
-            1: { damage: 10, range: 130, rateOfFire: 1100, specialAbility: 'Ice Nova' , baseAttackStrategy: 'BasicProjectile'},
-            2: { damage: 15, range: 140, rateOfFire: 1000, specialAbility: 'Blizzard' , baseAttackStrategy: 'BasicProjectile'},
+            0: { damage: 5, range: 5, rateOfFire: -50, specialAbility: 'HeavyShot' },
+            1: { damage: 8, range: 15, rateOfFire: -100, specialAbility: 'HeavyShot' },
+            2: { damage: 12, range: 20, rateOfFire: -150, specialAbility: 'HeavyShot' },
         },
         LowerPath: {
-            0: { damage: 8, range: 90, rateOfFire: 1000, specialAbility: 'Poison Cloud', baseAttackStrategy: 'BasicProjectile' },
-            1: { damage: 12, range: 100, rateOfFire: 950, specialAbility: 'Acid Rain', baseAttackStrategy: 'BasicProjectile' },
-            2: { damage: 18, range: 110, rateOfFire: 900, specialAbility: 'Toxic Wave' , baseAttackStrategy: 'BasicProjectile'},
+            0: { damage: 4, range: 5, rateOfFire: -50, specialAbility: 'HeavyShot' },
+            1: { damage: 6, range: 10, rateOfFire: -100, specialAbility: 'HeavyShot' },
+            2: { damage: 10, range: 15, rateOfFire: -150, specialAbility: 'HeavyShot' },
         },
     },
+
     lightning: {
         TopPath: {
-            0: { damage: 10, range: 100, rateOfFire: 1000, specialAbility: 'Fireball' , baseAttackStrategy: 'BasicProjectile'},
-            1: { damage: 20, range: 120, rateOfFire: 900, specialAbility: 'Flame Burst' , baseAttackStrategy: 'BasicProjectile'},
-            2: { damage: 40, range: 150, rateOfFire: 800, specialAbility: 'Inferno', baseAttackStrategy: 'BasicProjectile' },
+            0: { damage: 5, range: 15, rateOfFire: -50, specialAbility: 'Chain Lightning' },
+            1: { damage: 8, range: 25, rateOfFire: -100, specialAbility: 'Chain Lightning' },
+            2: { damage: 12, range: 40, rateOfFire: -150, specialAbility: 'Chain Lightning' },
         },
         MiddlePath: {
-            0: { damage: 5, range: 110, rateOfFire: 1200, specialAbility: 'Freeze', baseAttackStrategy: 'BasicProjectile' },
-            1: { damage: 10, range: 130, rateOfFire: 1100, specialAbility: 'Ice Nova' , baseAttackStrategy: 'BasicProjectile'},
-            2: { damage: 15, range: 140, rateOfFire: 1000, specialAbility: 'Blizzard' , baseAttackStrategy: 'BasicProjectile'},
+            0: { damage: 3, range: 10, rateOfFire: -50, specialAbility: 'Chain Lightning' },
+            1: { damage: 5, range: 20, rateOfFire: -100, specialAbility: 'Chain Lightning' },
+            2: { damage: 8, range: 30, rateOfFire: -150, specialAbility: 'Shock' },
         },
         LowerPath: {
-            0: { damage: 8, range: 90, rateOfFire: 1000, specialAbility: 'Poison Cloud' , baseAttackStrategy: 'BasicProjectile'},
-            1: { damage: 12, range: 100, rateOfFire: 950, specialAbility: 'Acid Rain' , baseAttackStrategy: 'BasicProjectile'},
-            2: { damage: 18, range: 110, rateOfFire: 900, specialAbility: 'Toxic Wave', baseAttackStrategy: 'BasicProjectile' },
+            0: { damage: 4, range: 15, rateOfFire: -50, specialAbility: 'Chain Lightning' },
+            1: { damage: 7, range: 25, rateOfFire: -100, specialAbility: 'Chain Lightning' },
+            2: { damage: 10, range: 40, rateOfFire: -150, specialAbility: 'Chain Lightning' },
         },
-    }
+    },
 };
 
+export type {
+    UpgradeModifiers,
+    UpgradePath,
+    TowerUpgrades,
+};

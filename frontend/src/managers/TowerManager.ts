@@ -80,7 +80,7 @@ export class TowerManager {
                 this.scene,
                 tileX * size + size / 2,
                 tileY * size + size / 2,
-                selectedTower // only the type ('fire')
+                selectedTower
             );
 
             this.towers.push(tower);

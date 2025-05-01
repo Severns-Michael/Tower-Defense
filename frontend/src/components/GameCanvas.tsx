@@ -3,12 +3,18 @@ import Phaser from 'phaser';
 import {TowerInfoType, TowerType} from '../types/Tower';
 import GameScene from '../Phaser/scenes/GameScene';
 import {LevelEditorScene} from '../Phaser/scenes/LevelEditorScene';
-import TilePalette from "./TilePalette";
 import TilePaletteGroup from "./TilePaletteGroup";
 import { downloadMapJSON} from "../utils/maputils";
 import EventBus from "../Phaser/Utils/EventBus";
 import TowerSelector from './TowerUi';
 import UpgradePanel from "./UpgradePanel";
+import GameHUD from './GameHUD';
+
+
+import NextRoundButton from "./NextRoundButton";
+import GamePanel from "./GamePanel";
+import {Tower} from "../Phaser/Objects/Tower";
+import {waves} from "../types/waves";
 
 const GameCanvas: React.FC = () => {
     const gameRef = useRef<HTMLDivElement>(null);
@@ -19,12 +25,12 @@ const GameCanvas: React.FC = () => {
     const [selectedLayer, setSelectedLayer] = useState<number>(0); // Default to Ground layer
     const [placingMode, setPlacingMode] = useState<'tile' | 'spawn' | 'end' | 'tower'>('tile');
     const [currentRound, setCurrentRound] = useState(1);
-    const maxRounds = 5; // or fetch dynamically if needed
+    const maxRounds = waves.length;
     const [gameOver, setGameOver] = useState(false);
     const [playerHealth, setPlayerHealth] = useState(100);
     const [enemiesRemaining, setEnemiesRemaining] = useState(0);
     const [playerMoney, setPlayerMoney] = useState(500);
-    const [selectedTowerForUpgrade, setSelectedTowerForUpgrade] = useState<TowerInfoType | null>(null);
+    const [selectedTowerForUpgrade, setSelectedTowerForUpgrade] = useState<Tower | null>(null);
 
 
     const palettes = [
@@ -42,8 +48,8 @@ const GameCanvas: React.FC = () => {
 
 
     useEffect(() => {
-        const canvasWidth = 1000;  // Set a fixed width for the game canvas
-        const canvasHeight = 750; // Set a fixed height for the game canvas
+        const canvasWidth = 960;  // Set a fixed width for the game canvas
+        const canvasHeight = 640; // Set a fixed height for the game canvas
 
         const config: Phaser.Types.Core.GameConfig = {
             type: Phaser.AUTO,
@@ -100,8 +106,8 @@ const GameCanvas: React.FC = () => {
     }, [gameInstance]);
 
     useEffect(() => {
-        const handleRoundChanged = (data: { round: number }) => {
-            setCurrentRound(data.round);
+        const handleRoundChanged = (roundNumber: number) => {
+            setCurrentRound(roundNumber);
         };
 
         EventBus.on('round-changed', handleRoundChanged);
@@ -134,6 +140,7 @@ const GameCanvas: React.FC = () => {
             EventBus.off('health-changed', handleHealthChanged);
         };
     }, []);
+
     useEffect(() => {
         const handleEnemiesChanged = (count: number) => {
             console.log('Enemies Remaining:', count);
@@ -146,6 +153,7 @@ const GameCanvas: React.FC = () => {
             EventBus.off('enemies-changed', handleEnemiesChanged);
         };
     }, []);
+
     useEffect(() => {
         const handleMoneyChanged = (money: number) => {
             setPlayerMoney(money);
@@ -157,12 +165,16 @@ const GameCanvas: React.FC = () => {
             EventBus.off('money-changed', handleMoneyChanged);
         };
     }, []);
+    const upgradeListener = (tower: Tower) => {
+        setSelectedTowerForUpgrade(tower);
+    };
+
     useEffect(() => {
         if (!gameInstance) return;
 
         const scene = gameInstance.scene.getScene('GameScene') as GameScene;
-        const upgradeListener = (towerInfo: TowerInfoType) => {
-            setSelectedTowerForUpgrade(towerInfo);
+        const upgradeListener = (tower: Tower) => {
+            setSelectedTowerForUpgrade(tower);
         };
 
         scene.events.on('tower-selected-for-upgrade', upgradeListener);
@@ -172,7 +184,6 @@ const GameCanvas: React.FC = () => {
         };
     }, [gameInstance]);
 
-
     const handleTileSelect = (tileIndex: number, paletteIndex: number) => {
         setSelectedTileType(tileIndex);
         setPlacingMode('tile');
@@ -180,7 +191,7 @@ const GameCanvas: React.FC = () => {
         if (gameInstance) {
             const levelEditorScene = gameInstance.scene.getScene('LevelEditorScene') as LevelEditorScene;
 
-            // Emit cancellation if previously in 'spawn' or 'end' mode
+
             levelEditorScene.events.emit('cancel-placement');
 
             levelEditorScene.events.emit('tile-selected', {
@@ -239,93 +250,75 @@ const GameCanvas: React.FC = () => {
     };
 
     const handlePlacementComplete = () => {
-        setPlacingMode('tile'); // Switch back to tile mode
+        setPlacingMode('tile');
         console.log('Placement complete, switched back to tile mode.');
     };
     const restartGame = () => {
         if (!gameInstance) return;
 
-        setGameOver(false);     // Hide Game Over screen
-        setCurrentRound(1);     // Reset rounds to 1
-        setPlayerHealth(100);   // Reset health to 100
+        setGameOver(false);
+        setCurrentRound(1);
+        setPlayerHealth(100);
 
         const scene = gameInstance.scene.getScene('GameScene');
-        scene.scene.restart();  // Restart Phaser scene
+        scene.scene.restart();
     };
+
 
     return (
         <>
-            <div style={{
-                position: 'absolute',
-                top: 200,
-                right: 20,
-                zIndex: 30,
-                backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                padding: '10px',
-                borderRadius: '8px',
-            }}>
-                <h2>Money: ${playerMoney}</h2>
-            </div>
-            <div style={{
-                position: 'absolute',
-                top: 140,
-                right: 20,
-                zIndex: 30,
-                backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                padding: '10px',
-                borderRadius: '8px',
-            }}>
-                <h2>Enemies Left: {enemiesRemaining}</h2>
-            </div>
-            <div style={{
-                position: 'absolute',
-                top: 80,
-                right: 20,
-                zIndex: 30,
-                backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                padding: '10px',
-                borderRadius: '8px',
-            }}>
-                <h2>Health: {playerHealth}</h2>
-            </div>
-            {/* Round Tracker */}
-            <div style={{
-                position: 'absolute',
-                top: 20,
-                right: 20,
-                zIndex: 30,
-                backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                padding: '10px',
-                borderRadius: '8px',
-            }}>
-                <h2>Round {currentRound} / {maxRounds}</h2>
-            </div>
+            <GameHUD money={playerMoney} lives={playerHealth} round={currentRound} maxRounds={maxRounds}/>
 
-            {/* Main Game and UI */}
-            <div style={{display: 'flex'}}>
-                <div ref={gameRef} id="phaser-container"/>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', width: '100%',alignItems: 'center',minHeight: '100vh' }}>
+                <div ref={gameRef} id="phaser-container" />
 
-                {/* Editor UI Panel */}
+                {!editorMode && (
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '20px',
+                        alignItems: 'center',
+                        justifyContent: 'flex-start'
+                    }}>
+                        {!selectedTowerForUpgrade ? (
+                            <GamePanel title="Select a Tower">
+                                <TowerSelector onTowerSelect={handleTowerSelect} />
+                            </GamePanel>
+                        ) : (
+                            <GamePanel title={`${selectedTowerForUpgrade.type.toUpperCase()} Tower`}>
+                                <UpgradePanel
+                                    tower={selectedTowerForUpgrade}
+                                    onClose={() => setSelectedTowerForUpgrade(null)}
+                                />
+                            </GamePanel>
+                        )}
+
+                        <NextRoundButton
+                            onClick={() => {
+                                if (!gameInstance) return;
+                                const scene = gameInstance.scene.getScene('GameScene') as GameScene;
+                                scene.roundManager?.startNextRound();
+                            }}
+                        />
+                    </div>
+                )}
+
                 {editorMode && (
-                    <div
-                        style={{
-                            marginLeft: '10px',
-                            height: '750px',
-                            position: 'relative',
-                            zIndex: 10,
-                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                            padding: '10px',
-                            overflowY: 'auto',
-                        }}
-                    >
+                    <div style={{
+                        marginLeft: '10px',
+                        height: '750px',
+                        padding: '10px',
+                        overflowY: 'auto',
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        border: '2px solid #00ffff',
+                        borderRadius: '12px',
+                        boxShadow: '0 0 12px rgba(0, 255, 255, 0.2)'
+                    }}>
                         <h4>Layer Selector</h4>
                         {layers.map((layer, index) => (
                             <button
                                 key={index}
-                                style={{
-                                    margin: '2px',
-                                    backgroundColor: selectedLayer === index ? '#ddd' : '#fff',
-                                }}
+                                style={{ margin: '2px', backgroundColor: selectedLayer === index ? '#ddd' : '#fff' }}
                                 onClick={() => handleLayerSelect(index)}
                             >
                                 {layer.label}
@@ -334,94 +327,43 @@ const GameCanvas: React.FC = () => {
 
                         <h4>Tile Palette</h4>
                         <TilePaletteGroup
-                            palettes={palettes.filter((_, i) =>
-                                layerToPaletteMap[selectedLayer]?.includes(i)
-                            )}
+                            palettes={palettes.filter((_, i) => layerToPaletteMap[selectedLayer]?.includes(i))}
                             onTileSelect={handleTileSelect}
                         />
 
                         <h4>Special Points</h4>
-                        <button
-                            onClick={() => {
-                                setPlacingMode('spawn');
-                                gameInstance?.scene.getScene('LevelEditorScene').events.emit('start-placing-spawn');
-                                gameInstance?.scene.getScene('LevelEditorScene').events.once('spawn-placed', handlePlacementComplete);
-                            }}
-                        >
+                        <button onClick={() => {
+                            setPlacingMode('spawn');
+                            gameInstance?.scene.getScene('LevelEditorScene').events.emit('start-placing-spawn');
+                        }}>
                             Place Spawn
                         </button>
-                        <button
-                            onClick={() => {
-                                setPlacingMode('end');
-                                gameInstance?.scene.getScene('LevelEditorScene').events.emit('start-placing-end');
-                                gameInstance?.scene.getScene('LevelEditorScene').events.once('end-placed', handlePlacementComplete);
-                            }}
-                        >
+                        <button onClick={() => {
+                            setPlacingMode('end');
+                            gameInstance?.scene.getScene('LevelEditorScene').events.emit('start-placing-end');
+                        }}>
                             Place End
                         </button>
-                        <button
-                            onClick={() => {
-                                if (!gameInstance) return;
-                                const levelEditorScene = gameInstance.scene.getScene('LevelEditorScene') as LevelEditorScene;
-                                const tilemap = levelEditorScene.getTileData();
-                                downloadMapJSON(tilemap.layers, tilemap.mapWidth, tilemap.mapHeight, tilemap.spawnPoints, tilemap.endPoints);
-                            }}
-                        >
+                        <button onClick={() => {
+                            if (!gameInstance) return;
+                            const levelEditorScene = gameInstance.scene.getScene('LevelEditorScene') as LevelEditorScene;
+                            const tilemap = levelEditorScene.getTileData();
+                            downloadMapJSON(tilemap.layers, tilemap.mapWidth, tilemap.mapHeight, tilemap.spawnPoints, tilemap.endPoints);
+                        }}>
                             Download Map
                         </button>
-                    </div>
-                )}
-
-                {!editorMode && (
-                    <div
-                        style={{
-                            marginLeft: '10px',
-                            height: '750px',
-                            position: 'relative',
-                            zIndex: 10,
-                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                            padding: '10px',
-                            overflowY: 'auto',
-                        }}
-                    >
-                        {selectedTowerForUpgrade ? (
-                            <>
-                                <h4>Upgrade Tower</h4>
-                                <UpgradePanel
-                                    tower={selectedTowerForUpgrade}
-                                    onUpgradePathClick={(path) => {
-                                        const scene = gameInstance?.scene.getScene('GameScene') as GameScene;
-                                        scene?.events.emit('upgrade-tower-path', path);
-                                    }}
-                                />
-                                <button onClick={() => setSelectedTowerForUpgrade(null)}>Back to Tower Select</button>
-                            </>
-                        ) : (
-                            <>
-                                <h4>Select Tower</h4>
-                                <TowerSelector onTowerSelect={handleTowerSelect} />
-                                <h4>Round Control</h4>
-                                <button
-                                    onClick={() => {
-                                        if (!gameInstance) return;
-                                        const scene = gameInstance.scene.getScene('GameScene') as GameScene;
-                                        scene.roundManager?.startNextRound();
-                                    }}
-                                >
-                                    Start Next Round
-                                </button>
-                            </>
-                        )}
                     </div>
                 )}
             </div>
 
             {/* Editor Toggle */}
-            <div style={{position: 'absolute', top: '20px', left: '20px', zIndex: 20}}>
+            <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 20 }}>
                 <button onClick={toggleEditorMode}>
                     {editorMode ? 'Play Game' : 'Open Level Editor'}
                 </button>
             </div>
+
+            {/* Game Over */}
             {gameOver && (
                 <div style={{
                     position: 'absolute',

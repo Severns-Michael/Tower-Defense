@@ -1,67 +1,85 @@
 import React from 'react';
+import { Tower } from '../Phaser/Objects/Tower';
+import { SpecialAbilityDescriptions } from '../Phaser/Utils/AbilityDescriptions';
 import { TowerData } from '../Phaser/Utils/TowerData';
-import { TowerType } from '../types/Tower';
 
 type PathName = 'TopPath' | 'MiddlePath' | 'LowerPath';
 
 interface UpgradePanelProps {
-    tower: {
-        type: TowerType;
-        pathLevels: { [key in PathName]: number };
-    };
-    onUpgradePathClick: (path: PathName) => void;
+    tower: Tower;
+    onClose: () => void;
 }
 
-const UpgradePanel: React.FC<UpgradePanelProps> = ({ tower, onUpgradePathClick }) => {
+const UpgradePanel: React.FC<UpgradePanelProps> = ({ tower, onClose }) => {
     const towerStats = TowerData[tower.type];
     const { pathLevels } = tower;
+    const [, forceUpdate] = React.useState(0);
 
     const upgradedPaths = Object.values(pathLevels).filter(lvl => lvl >= 0).length;
-    const hasT3 = Object.values(pathLevels).includes(2);
 
     return (
-        <div className="upgrade-panel">
-            <h3>{tower.type.toUpperCase()} Tower Upgrades</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <p style={{ color: '#00ffff' }}>
+                Special Ability: {Object.values(pathLevels).some(v => v >= 0)
+                ? SpecialAbilityDescriptions[TowerData[tower.type][Object.keys(pathLevels).find(p => pathLevels[p as PathName] >= 0)! as PathName][pathLevels[Object.keys(pathLevels).find(p => pathLevels[p as PathName] >= 0)! as PathName]].specialAbility ?? ''] ?? 'None'
+                : 'None'}
+            </p>
 
             {(['TopPath', 'MiddlePath', 'LowerPath'] as const).map((path) => {
                 const pathLevel = pathLevels[path];
                 const upgrades = towerStats[path];
+                const nextUpgrade = upgrades[pathLevel + 1];
+                const nextAbility = nextUpgrade?.specialAbility ?? null;
+                const hasT3 = Object.values(pathLevels).includes(2);
+                const isTryingToUpgradeToT3 = pathLevel + 1 === 2;
+
+                const isMaxed = !nextAbility;
+                const isLocked = isMaxed || (upgradedPaths >= 2 && pathLevel === -1) || (hasT3 && isTryingToUpgradeToT3);
 
                 return (
-                    <div key={path} style={{ marginBottom: '10px' }}>
-                        <strong>{path}</strong>
-                        {Object.entries(upgrades).map(([levelStr, upgrade]) => {
-                            const level = parseInt(levelStr);
-                            const isApplied = pathLevel === level;
-                            const canUpgrade = level === pathLevel + 1;
+                    <div key={path}>
+                        <strong style={{ color: '#00ffff' }}>{path}</strong>
+                        <p>Level: {pathLevel >= 0 ? `T${pathLevel + 1}` : 'Not Upgraded'}</p>
 
-                            // LOCK LOGIC:
-                            const isLocked =
-                                // Third path completely locked if other two are used
-                                (upgradedPaths >= 2 && pathLevel === -1) ||
-                                // No second T3
-                                (level === 2 && hasT3 && pathLevel !== 2);
-
-                            return (
-                                <div key={level} style={{ marginLeft: '10px' }}>
-                                    <p>
-                                        T{level + 1}: {upgrade.specialAbility} — Damage: {upgrade.damage}, Range: {upgrade.range}, RoF: {upgrade.rateOfFire}
-                                    </p>
-                                    {isApplied ? (
-                                        <button disabled>Already Applied</button>
-                                    ) : isLocked ? (
-                                        <span style={{ color: 'gray' }}>🔒 Locked</span>
-                                    ) : canUpgrade ? (
-                                        <button onClick={() => onUpgradePathClick(path)}>Upgrade</button>
-                                    ) : (
-                                        <button disabled>Unavailable</button>
-                                    )}
-                                </div>
-                            );
-                        })}
+                        {isMaxed ? (
+                            <span style={{ color: 'gray' }}>✅ Maxed</span>
+                        ) : isLocked ? (
+                            <span style={{ color: 'gray' }}>🔒 Locked</span>
+                        ) : (
+                            <button
+                                onClick={() => {
+                                    tower.upgradePath(path);
+                                    forceUpdate(prev => prev + 1);
+                                }}
+                                style={{
+                                    padding: '6px 12px',
+                                    backgroundColor: '#00ffff',
+                                    color: '#000',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Upgrade to: {SpecialAbilityDescriptions[nextAbility] ?? nextAbility}
+                            </button>
+                        )}
                     </div>
                 );
             })}
+
+            <button
+                onClick={onClose}
+                style={{
+                    padding: '8px',
+                    backgroundColor: '#ff4d4d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
+                }}
+            >
+                Close
+            </button>
         </div>
     );
 };

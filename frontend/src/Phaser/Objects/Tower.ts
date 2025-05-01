@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
-import { TowerData, UpgradeStats } from '../Utils/TowerData';
+import {TowerData, UpgradeModifiers} from '../Utils/TowerData';
 import { Enemy } from './Enemy';
-import { Projectile } from './Projectile';
 import {TowerType, UpgradePath} from '../../types/Tower';
 import { AttackStrategy } from '../Utils/AttackStrategy/AttackStrategy';
 import { BasicProjectileAttack } from '../Utils/AttackStrategy/BasicProjectileAttack';
@@ -10,13 +9,20 @@ import { BaseTowers } from '../Utils/BaseTower';
 import { BaseTowerStats, AttackStrategyType } from '../Utils/BaseTowerTypes';
 import { SlowShotAttack } from '../Utils/AttackStrategy/SlowShotAttack';
 import { HeavyShotAttack } from '../Utils/AttackStrategy/HeavyShotAttack';
+import {SpecialAbilityDescriptions} from "../Utils/AbilityDescriptions";
 
 
 export class Tower extends Phaser.GameObjects.Sprite {
 
     path: 'TopPath' | 'MiddlePath' | 'LowerPath';
     level: number;
-    stats: UpgradeStats;
+    stats: {
+        damage: number;
+        range: number;
+        rateOfFire: number;
+        specialAbility: string;
+        baseAttackStrategy: string;
+    };
     lastShotTime: number = 0;
     cooldown: number = 1000;
     rangeCircle: Phaser.GameObjects.Arc;
@@ -45,13 +51,7 @@ export class Tower extends Phaser.GameObjects.Sprite {
         this.setInteractive({ useHandCursor: true });
 
         this.on('pointerdown', () => {
-            this.scene.events.emit('tower-selected-for-upgrade', {
-                type: this.type,
-                pathLevels: this.pathLevels,
-            });
-
-            // Store reference for upgrade command
-            (this.scene as any).selectedTowerRef = this; // We'll use this later
+            this.scene.events.emit('tower-selected-for-upgrade', this);
         });
 
         this.specialAbility = baseStats.specialAbility;
@@ -117,41 +117,105 @@ export class Tower extends Phaser.GameObjects.Sprite {
     upgradePath(path: 'TopPath' | 'MiddlePath' | 'LowerPath') {
         const currentLevel = this.pathLevels[path];
 
-        // Do not upgrade past level 2
         if (currentLevel >= 2) return;
 
         const nextLevel = currentLevel + 1;
 
-        // Count how many paths have been upgraded at all (>= 0)
-        const upgradedPaths = Object.entries(this.pathLevels)
-            .filter(([p, lvl]) => lvl >= 0);
-
-        // Check if any path already reached T3
+        const upgradedPaths = Object.entries(this.pathLevels).filter(([p, lvl]) => lvl >= 0);
         const hasT3 = Object.values(this.pathLevels).includes(2);
 
-        // You can only upgrade to T3 if no other path is at T3
-        if (nextLevel === 2 && hasT3) {
-            return;
-        }
+        if (nextLevel === 2 && hasT3) return;
+        if (upgradedPaths.length === 2 && currentLevel === -1) return;
 
-        // You can only upgrade a second path to T2 (level 1) max
-        if (upgradedPaths.length === 2 && currentLevel === -1) {
-            return;
-        }
-
-        // Perform upgrade
-        const upgrade = TowerData[this.type][path][nextLevel];
-        if (!upgrade) return;
+        const modifiers = TowerData[this.type][path][nextLevel];
+        if (!modifiers) return;
 
         this.pathLevels[path] = nextLevel;
         this.path = path;
         this.level = nextLevel;
 
-        this.stats = upgrade;
-        this.fireStrategy = this.getFireStrategy(upgrade.baseAttackStrategy);
-
+        this.applyUpgradeStats();
+        console.log('Upgrading pathLevels:', JSON.stringify(this.pathLevels));
 
         console.log(`🔼 Upgraded ${this.type} tower to T${nextLevel + 1} on ${path}`);
     }
 
+    applyUpgradeStats() {
+        const paths = this.pathLevels;
+        const towerStats = TowerData[this.type];
+        const baseStats = BaseTowers[this.type];
+
+        // Reset to base
+        this.stats.damage = baseStats.damage;
+        this.stats.range = baseStats.range;
+        this.stats.rateOfFire = baseStats.rateOfFire;
+        this.specialAbility = baseStats.specialAbility;
+        this.stats.specialAbility = baseStats.specialAbility;
+        this.fireStrategy = this.getFireStrategy(baseStats.baseAttackStrategy);
+
+
+        (['TopPath', 'MiddlePath', 'LowerPath'] as const).forEach(path => {
+            const level = paths[path];
+
+            if (level >= 0) {
+                for (let i = 0; i <= level; i++) {
+                    const upgrade = towerStats[path][i];
+
+                    if (upgrade.damage !== undefined) {
+                        this.stats.damage += upgrade.damage;
+                    }
+
+                    if (upgrade.range !== undefined) {
+                        this.stats.range += upgrade.range;
+                    }
+
+                    if (upgrade.rateOfFire !== undefined) {
+                        this.stats.rateOfFire += upgrade.rateOfFire;
+                    }
+
+                    if (upgrade.specialAbility) {
+                        this.stats.specialAbility = upgrade.specialAbility;
+                        this.specialAbility = upgrade.specialAbility;
+                    }
+
+                    if (upgrade.baseAttackStrategy) {
+                        this.fireStrategy = this.getFireStrategy(upgrade.baseAttackStrategy);
+                    }
+                }
+            }
+        });
+
+        this.rangeCircle.setRadius(this.stats.range);
+
+    }
+    getSpecialParams(): any {
+        const params: any = {};
+
+        // Fireball T3 (Inferno → 2x DoT)
+        if (this.specialAbility === 'Fireball' && this.pathLevels['TopPath'] === 2) {
+            params.dotDamage = this.stats.damage * 0.5;
+        }
+
+        // Chain Lightning T3 (TopPath → more chains)
+        if (this.specialAbility === 'Chain Lightning' && this.pathLevels['TopPath'] === 2) {
+            params.chainRange = 500;
+            params.chains = 5;
+        }
+
+        // Chain Lightning T3 (LowerPath → high single target dmg)
+        if (this.specialAbility === 'Chain Lightning' && this.pathLevels['LowerPath'] === 2) {
+            params.chainRange = 0;
+            params.chains = 0;
+        }
+
+        // SlowShotv2
+        if (this.specialAbility === 'SlowShotv2') {
+            params.freezeDuration = 4;
+        }
+
+        return params;
+    }
+    getCurrentAbilityDescription(): string {
+        return SpecialAbilityDescriptions[this.specialAbility] ?? "Basic attack.";
+    }
 }

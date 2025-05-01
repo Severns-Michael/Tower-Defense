@@ -1,6 +1,6 @@
 import { GameRound, GameWave } from "../types/GameWaves";
-import {EnemyType} from "../types/EnemyTypes";
 import EventBus from "../Phaser/Utils/EventBus";
+
 
 type RoundEvents = {
   onRoundStart?: (round: number) => void;
@@ -24,10 +24,9 @@ export class RoundManager {
 
 
 
-    // ✅ NEW: Listen when all enemies are cleared
+
     EventBus.on('all-enemies-dead', () => {
       if (this.isRoundActive && this.allWavesSpawned) {
-        console.log('🏁 All enemies dead + all waves sent -> Completing round.');
         this.completeRound();
       }
     });
@@ -42,6 +41,8 @@ export class RoundManager {
     }
 
     const round = this.rounds[this.currentRoundIndex];
+
+    EventBus.emit('round-changed', round.roundNumber);
     this.events.onRoundStart?.(round.roundNumber);
 
     this.currentWaveIndex = 0;
@@ -61,7 +62,7 @@ export class RoundManager {
       this.currentWaveIndex++;
 
       if (this.currentWaveIndex >= round.waves.length) {
-        console.log('✅ All waves spawned for this round.');
+
         this.allWavesSpawned = true;
       } else {
         this.startNextWave();
@@ -89,13 +90,13 @@ export class RoundManager {
 
   private handleAllEnemiesDead() {
     if (this.isRoundActive && this.allWavesSpawned) {
-      console.log('🏁 All enemies dead + all waves sent -> Completing round.');
+
       this.completeRound();
     }
   }
 
   completeRound() {
-    console.log(' Round completed! Emitting round-completed event.');
+
     this.isRoundActive = false;
     this.currentRoundIndex++;
     EventBus.emit('round-completed');

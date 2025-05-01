@@ -16,7 +16,7 @@ export function convertToTiledJSON(layers: Record<string, number[][]>, mapWidth:
     const mapLayers = Object.keys(layers).map(layerName => {
         const layerData = layers[layerName];
 
-        // Flatten the 2D array into a 1D array for Tiled compatibility
+        // Flatten
         const flattenedData = layerData.reduce((acc, row) => acc.concat(row), []);
 
         // Prepare the map layer with flattened data
@@ -29,7 +29,7 @@ export function convertToTiledJSON(layers: Record<string, number[][]>, mapWidth:
             y: 0,
             visible: true,
             opacity: 1,
-            data: flattenedData,  // Pass the flattened data
+            data: flattenedData,
         };
     });
 
@@ -55,12 +55,12 @@ export function convertToTiledJSON(layers: Record<string, number[][]>, mapWidth:
     };
 }
 
-// Function to download the map as a JSON file
+// Function to download the map
 export function downloadMapJSON(layers: Record<string, number[][]>, mapWidth: number, mapHeight: number, spawnPoints: { x: number, y: number }[], endPoints: { x: number, y: number }[]) {
     // Call the function to generate Tiled JSON from layers
     const json = convertToTiledJSON(layers, mapWidth, mapHeight, spawnPoints, endPoints);
 
-    // Create the JSON file blob and initiate the download
+    // Create the JSON file
     const blob = new Blob([JSON.stringify(json, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
 

@@ -6,11 +6,10 @@ import { EnemyManager } from "../../managers/EnemyManager";
 import { TowerManager } from "../../managers/TowerManager";
 import { waves } from '../../types/waves';
 import EventBus from "../Utils/EventBus";
-import { extractPathFromLayer, drawPath } from '../Utils/PathUtils';
+import { extractPathFromLayer } from '../Utils/PathUtils';
 import { populateLayer } from '../Utils/TilemapUtils';
 import {Enemy} from "../Objects/Enemy";
 import {Tower} from "../Objects/Tower";
-import { TowerData } from '../Utils/TowerData';
 import {EnemyType} from "../../types/EnemyTypes";
 
 type LayerName = 'Ground' | 'Path' | 'Obstacles' | 'Props';
@@ -43,7 +42,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.json('map', 'assets/custom_map3.json');
+        this.load.json('map', 'assets/custom_map4.json');
         this.load.spritesheet('grass_tileset', 'assets/tilesets/grass_tileset.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('stone_tileset', 'assets/tilesets/stone_ground_tileset.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('wall_tileset', 'assets/tilesets/wall_tileset.png', { frameWidth: 32, frameHeight: 32 });
@@ -103,7 +102,7 @@ export default class MainScene extends Phaser.Scene {
             this.spawnPoints,
             this.mapData.endPoints
         );
-        drawPath(this, this.path);
+        // drawPath(this, this.path);
 
         // ✅ Create managers AFTER extracting path
         this.playerManager = new PlayerManager(this, 500, 100);
@@ -148,7 +147,7 @@ export default class MainScene extends Phaser.Scene {
             this.playerManager.earnMoney(data.reward);
         });
 
-        EventBus.emit('round-changed', { round: this.currentRound });
+        EventBus.emit('round-changed', this.currentRound);
 
         this.events.on('tower-selected-for-upgrade', (towerInfo: { type: TowerType; pathLevels: Record<string, number> }) => {
             this.selectedTowerRef = this.towerManager.towers.find((t: Tower) =>
@@ -218,10 +217,6 @@ export default class MainScene extends Phaser.Scene {
         });
 
 
-        this.input.on('wheel', (pointer: Phaser.Input.Pointer) => {
-            const scaleChange = pointer.deltaY > 0 ? 0.1 : -0.1;
-            this.cameras.main.zoom = Phaser.Math.Clamp(this.cameras.main.zoom + scaleChange, 0.5, 2);
-        });
 
     }
 }

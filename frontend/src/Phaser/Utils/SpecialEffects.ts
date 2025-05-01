@@ -99,4 +99,58 @@ export function knockbackEnemy(enemy: Enemy, sourceX: number, sourceY: number, s
     }
 
 }
-export const SPECIAL_ABILITIES_OVERRIDE_ATTACK = ['Chain Lightning'];
+export function fireInferno(scene: Phaser.Scene, target: Enemy, damage: number, duration: number) {
+    fireDmgOverTime(scene, target, damage * 0.4, duration);
+    fireDmgOverTime(scene, target, damage * 0.4, duration);
+
+}
+export function blizzardAOE(scene: Phaser.Scene, x: number, y: number, enemies: Enemy[], radius: number, damage: number, freezeDuration: number) {
+    const affected = enemies.filter(enemy =>
+        !enemy.isDead &&
+        Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y) <= radius
+    );
+
+    affected.forEach(enemy => {
+        enemy.takeDamage(damage);
+        freezeEnemy(enemy, freezeDuration);
+    });
+}
+export function applySlowDebuff(target: Enemy, duration: number = 5, damageMultiplier: number = 1.25) {
+
+
+    // Assume Enemy has "damageMultiplier" property or add temporary one
+    (target as any).damageMultiplier = damageMultiplier;
+
+    // Remove debuff after duration
+    setTimeout(() => {
+        (target as any).damageMultiplier = 1;
+    }, duration * 1000);
+}
+export function chainLightningStun(scene: Phaser.Scene, x: number, y: number, enemies: Enemy[], radius: number, damage: number, stunDuration: number) {
+    const affected = enemies.filter(enemy =>
+        !enemy.isDead &&
+        Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y) <= radius
+    );
+
+    affected.forEach(enemy => {
+        enemy.takeDamage(damage);
+
+        if (enemy.freeze) {
+            enemy.freeze(stunDuration);
+        }
+    });
+
+}
+export function heavyShotBounce(scene: Phaser.Scene, originEnemy: Enemy, enemies: Enemy[], damage: number, bounceRange: number = 200) {
+    const bounceTarget = enemies.find(enemy =>
+        enemy !== originEnemy &&
+        !enemy.isDead &&
+        Phaser.Math.Distance.Between(originEnemy.x, originEnemy.y, enemy.x, enemy.y) <= bounceRange
+    );
+
+    if (bounceTarget) {
+        bounceTarget.takeDamage(damage);
+        console.log("🪨 Heavy Shot → Bounced to another enemy!");
+    }
+}
+

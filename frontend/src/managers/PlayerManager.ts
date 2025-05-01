@@ -60,6 +60,6 @@ export class PlayerManager {
 
         const rewardAmount = 100 + round * 50; // Example: scales with round
         this.earnMoney(rewardAmount);
-        console.log(`Player earned ${rewardAmount} for completing Round ${round}`);
+
     }
 }
