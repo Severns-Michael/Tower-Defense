@@ -24,10 +24,7 @@ const GameCanvas: React.FC = () => {
     const [playerHealth, setPlayerHealth] = useState(100);
     const [enemiesRemaining, setEnemiesRemaining] = useState(0);
     const [playerMoney, setPlayerMoney] = useState(500);
-    const [selectedTowerForUpgrade, setSelectedTowerForUpgrade] = useState<{ type: TowerType;
-        path: 'TopPath' | 'MiddlePath' | 'LowerPath';
-        level: number;
-    } | null>(null);
+    const [selectedTowerForUpgrade, setSelectedTowerForUpgrade] = useState<TowerInfoType | null>(null);
 
 
     const palettes = [

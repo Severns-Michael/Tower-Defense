@@ -11,6 +11,7 @@ import { populateLayer } from '../Utils/TilemapUtils';
 import {Enemy} from "../Objects/Enemy";
 import {Tower} from "../Objects/Tower";
 import { TowerData } from '../Utils/TowerData';
+import {EnemyType} from "../../types/EnemyTypes";
 
 type LayerName = 'Ground' | 'Path' | 'Obstacles' | 'Props';
 
@@ -25,6 +26,7 @@ export default class MainScene extends Phaser.Scene {
     private mapData!: any;
     private tileSize: number = 32;
     private tileScale: number = 1;
+    enemies: Enemy[] = [];
 
     spawnPoints: { x: number, y: number }[] = [];
     endPoints: Phaser.Math.Vector2[] = [];
@@ -118,18 +120,19 @@ export default class MainScene extends Phaser.Scene {
 
         // ✅ Create round manager
         this.roundManager = new RoundManager(waves, {
-            onRoundStart: (round) => {
-                console.log(`Round ${round} started`);
-                this.currentRound = round;
-                EventBus.emit('round-changed', { round });
-            },
-            onWaveStart: (wave) => {
-                console.log(`Wave ${wave} started`);
+            onRoundStart: (round) => console.log(`🌊 Round ${round} started`),
+            onWaveStart: (wave) => console.log(`⚡ Wave ${wave} started`),
+            spawnEnemy: (type) => {
+                this.enemyManager.spawnEnemy(
+                    this.spawnPoints[0].x,
+                    this.spawnPoints[0].y,
+                    this.handleEnemyReachedEnd.bind(this),
+                    type as EnemyType
+                );
             },
             onAllRoundsComplete: () => {
-                console.log('All rounds complete!');
-            },
-            spawnEnemy: (type: string) => this.spawnEnemy(type),
+
+            }
         });
         EventBus.on('round-completed', () => {
             console.log('✅ Round completed triggered.');
@@ -147,23 +150,23 @@ export default class MainScene extends Phaser.Scene {
 
         EventBus.emit('round-changed', { round: this.currentRound });
 
-        this.events.on('tower-selected-for-upgrade', (towerInfo: { type: TowerType; path: string; level: number; }) => {
+        this.events.on('tower-selected-for-upgrade', (towerInfo: { type: TowerType; pathLevels: Record<string, number> }) => {
             this.selectedTowerRef = this.towerManager.towers.find((t: Tower) =>
-                t.type === towerInfo.type &&
-                t.path === towerInfo.path &&
-                t.level === towerInfo.level
+                t.type === towerInfo.type
             ) || null;
 
-            // ✅ Do NOT re-emit here!
+
         });
+
+// Trigger an upgrade
         this.events.on('upgrade-tower-path', (path: UpgradePath) => {
             if (this.selectedTowerRef) {
                 this.selectedTowerRef.upgradePath(path);
-                // Optionally emit again to refresh UI
+
+                // 🔁 Re-emit with updated pathLevels to refresh UI
                 this.events.emit('tower-selected-for-upgrade', {
                     type: this.selectedTowerRef.type,
-                    path: this.selectedTowerRef.path,
-                    level: this.selectedTowerRef.level,
+                    pathLevels: this.selectedTowerRef.pathLevels,
                 });
             } else {
                 console.warn('No tower selected to upgrade.');
@@ -175,7 +178,12 @@ export default class MainScene extends Phaser.Scene {
 
     spawnEnemy(type: string) {
         const spawn = this.spawnPoints[0];
-        this.enemyManager.spawnEnemy(spawn.x, spawn.y, this.handleEnemyReachedEnd.bind(this));
+        this.enemyManager.spawnEnemy(
+            spawn.x,
+            spawn.y,
+            this.handleEnemyReachedEnd.bind(this),
+            type as EnemyType // assuming type is a string like 'grunt'
+        );
     }
 
     handleEnemyReachedEnd(enemy: Enemy) {

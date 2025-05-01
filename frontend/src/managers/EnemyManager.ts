@@ -1,5 +1,6 @@
 import { Enemy } from "../Phaser/Objects/Enemy";
 import EventBus from "../Phaser/Utils/EventBus";
+import {EnemyType} from "../types/EnemyTypes";
 
 export class EnemyManager {
     scene: Phaser.Scene;
@@ -15,8 +16,13 @@ export class EnemyManager {
         });
     }
 
-    spawnEnemy(x: number, y: number, onReachEnd: (enemy: Enemy) => void) {
-        const enemy = new Enemy(this.scene, x, y, this.path, onReachEnd);
+    spawnEnemy(
+        x: number,
+        y: number,
+        onReachEnd: (enemy: Enemy) => void,
+        type: EnemyType
+    ) {
+        const enemy = new Enemy(this.scene, x, y, this.path, onReachEnd, type);
         this.enemies.push(enemy);
 
         EventBus.emit('enemies-changed', this.enemies.length);

@@ -1,4 +1,5 @@
 import { GameRound, GameWave } from "../types/GameWaves";
+import {EnemyType} from "../types/EnemyTypes";
 import EventBus from "../Phaser/Utils/EventBus";
 
 type RoundEvents = {

@@ -9,8 +9,11 @@ export type UpgradeLevel = 0 | 1 | 2;
 
 export type TowerInfoType = {
     type: TowerType;
-    path: UpgradePath;
-    level: number;
+    pathLevels: {
+        TopPath: number;
+        MiddlePath: number;
+        LowerPath: number;
+    };
 };
 
 export interface TowerStats {

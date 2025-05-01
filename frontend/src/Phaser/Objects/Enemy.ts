@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import EventBus from "../Utils/EventBus";
+import {EnemyType, EnemyStats} from "../../types/EnemyTypes";
 
 export class Enemy extends Phaser.GameObjects.Sprite {
     health: number;
@@ -12,13 +13,16 @@ export class Enemy extends Phaser.GameObjects.Sprite {
     freezeTimer?: Phaser.Time.TimerEvent;
     healthBarBg: Phaser.GameObjects.Graphics;
     healthBar: Phaser.GameObjects.Graphics;
+    enemyType!: EnemyType;
+    reward: number;
 
     constructor(
         scene: Phaser.Scene,
         x: number,
         y: number,
         path: Phaser.Math.Vector2[],
-        onReachedEnd: (enemy: Enemy) => void
+        onReachedEnd: (enemy: Enemy) => void,
+        type: EnemyType
 
 
 
@@ -29,6 +33,11 @@ export class Enemy extends Phaser.GameObjects.Sprite {
         this.speed = 3;  // Speed in pixels per second
         this.path = path;
         this.onReachedEnd = onReachedEnd;
+        const def = EnemyStats[type];
+        this.health = def.health;
+        this.speed = def.speed;
+        this.reward = def.reward;
+
 
         scene.add.existing(this);
         scene.physics.world.enable(this);
@@ -106,7 +115,7 @@ export class Enemy extends Phaser.GameObjects.Sprite {
     handleDeath() {
         console.log('Enemy destroyed');
         this.isDead = true;
-        EventBus.emit('enemy-killed', { reward: 5, enemy: this });
+        EventBus.emit('enemy-killed', { reward: this.reward, enemy: this });
         this.destroy();
         this.healthBar.destroy();
         this.healthBarBg.destroy();

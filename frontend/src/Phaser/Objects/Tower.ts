@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { TowerData, UpgradeStats } from '../Utils/TowerData';
 import { Enemy } from './Enemy';
 import { Projectile } from './Projectile';
-import { TowerType } from '../../types/Tower';
+import {TowerType, UpgradePath} from '../../types/Tower';
 import { AttackStrategy } from '../Utils/AttackStrategy/AttackStrategy';
 import { BasicProjectileAttack } from '../Utils/AttackStrategy/BasicProjectileAttack';
 import { ChainLightningAttack } from '../Utils/AttackStrategy/ChainLightningAttack';
@@ -25,6 +25,8 @@ export class Tower extends Phaser.GameObjects.Sprite {
     fireStrategy: AttackStrategy;
     type: TowerType;
 
+
+
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
         super(scene, x, y, `${type}-tower`);
         this.type = type;
@@ -45,8 +47,7 @@ export class Tower extends Phaser.GameObjects.Sprite {
         this.on('pointerdown', () => {
             this.scene.events.emit('tower-selected-for-upgrade', {
                 type: this.type,
-                path: this.path,
-                level: this.level,
+                pathLevels: this.pathLevels,
             });
 
             // Store reference for upgrade command
@@ -57,6 +58,9 @@ export class Tower extends Phaser.GameObjects.Sprite {
         this.fireStrategy = this.getFireStrategy(baseStats.baseAttackStrategy);
 
         this.rangeCircle = scene.add.circle(x, y, this.stats.range, 0x00ff00, 0.1);
+
+
+
 
         scene.add.existing(this);
 
@@ -79,7 +83,7 @@ export class Tower extends Phaser.GameObjects.Sprite {
     }
 
     canShoot(time: number): boolean {
-        return time - this.lastShotTime >= this.rateOfFire;
+        return time - this.lastShotTime >= this.stats.rateOfFire;
     }
 
     update(time: number, delta: number, enemies: Enemy[]) {
@@ -105,13 +109,49 @@ export class Tower extends Phaser.GameObjects.Sprite {
 
         return closest || null;
     }
+    pathLevels: { [key in 'TopPath' | 'MiddlePath' | 'LowerPath']: number } = {
+        TopPath: -1,
+        MiddlePath: -1,
+        LowerPath: -1,
+    };
     upgradePath(path: 'TopPath' | 'MiddlePath' | 'LowerPath') {
-        if (this.level >= 2) return;
+        const currentLevel = this.pathLevels[path];
 
+        // Do not upgrade past level 2
+        if (currentLevel >= 2) return;
+
+        const nextLevel = currentLevel + 1;
+
+        // Count how many paths have been upgraded at all (>= 0)
+        const upgradedPaths = Object.entries(this.pathLevels)
+            .filter(([p, lvl]) => lvl >= 0);
+
+        // Check if any path already reached T3
+        const hasT3 = Object.values(this.pathLevels).includes(2);
+
+        // You can only upgrade to T3 if no other path is at T3
+        if (nextLevel === 2 && hasT3) {
+            return;
+        }
+
+        // You can only upgrade a second path to T2 (level 1) max
+        if (upgradedPaths.length === 2 && currentLevel === -1) {
+            return;
+        }
+
+        // Perform upgrade
+        const upgrade = TowerData[this.type][path][nextLevel];
+        if (!upgrade) return;
+
+        this.pathLevels[path] = nextLevel;
         this.path = path;
-        this.level += 1;
-        this.stats = TowerData[this.type][path][this.level];
-        this.fireStrategy = this.getFireStrategy(this.stats.baseAttackStrategy as AttackStrategyType);
-        console.log(`🔼 Upgraded ${this.type} tower to level ${this.level} on ${path}`);
+        this.level = nextLevel;
+
+        this.stats = upgrade;
+        this.fireStrategy = this.getFireStrategy(upgrade.baseAttackStrategy);
+
+
+        console.log(`🔼 Upgraded ${this.type} tower to T${nextLevel + 1} on ${path}`);
     }
+
 }
